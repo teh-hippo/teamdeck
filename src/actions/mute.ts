@@ -1,57 +1,25 @@
-import { action, type DialAction, type KeyAction, SingletonAction, type WillAppearEvent } from "@elgato/streamdeck";
+import { action } from "@elgato/streamdeck";
 
 import { teams } from "../teams/client";
-import { actionable } from "../teams/protocol";
-import type { TeamsSnapshot } from "../teams/types";
-
-const IMAGE = {
-	live: "imgs/actions/mute/on",
-	muted: "imgs/actions/mute/off",
-	disabled: "imgs/actions/mute/disabled",
-};
+import { ToggleAction } from "./toggle-action";
 
 /**
- * Toggles the Microsoft Teams microphone and mirrors live mute state on the key.
- *
- * State 0 = live (unmuted), state 1 = muted. The key is greyed when not in a meeting or when
- * Teams reports the mute control as unavailable.
+ * Toggles the Microsoft Teams microphone and mirrors live mute state on the key: green when
+ * live (unmuted), red when muted, greyed when not in a meeting.
  */
 @action({ UUID: "io.github.teh-hippo.teamdeck.mute" })
-export class Mute extends SingletonAction {
+export class Mute extends ToggleAction {
 	constructor() {
-		super();
-		// A single subscription drives every visible instance of this action.
-		teams.subscribe((snapshot) => {
-			for (const visible of this.actions) {
-				this.#render(visible, snapshot);
-			}
+		super({
+			permission: "canToggleMute",
+			stateField: "isMuted",
+			command: () => teams.toggleMute(),
+			images: {
+				whenTrue: "imgs/actions/mute/off",
+				whenFalse: "imgs/actions/mute/on",
+				disabled: "imgs/actions/mute/disabled",
+			},
 		});
 	}
-
-	override onWillAppear(ev: WillAppearEvent): void {
-		this.#render(ev.action, teams.snapshot);
-	}
-
-	override onKeyDown(): void {
-		if (teams.isActionable("canToggleMute")) {
-			teams.toggleMute();
-		} else {
-			// Not actionable (stale socket, or a missed pairing prompt): poke a reconnect, which
-			// re-triggers pairing while in a meeting.
-			teams.reconnect();
-		}
-	}
-
-	#render(target: DialAction | KeyAction, snapshot: TeamsSnapshot): void {
-		if (!target.isKey()) {
-			return;
-		}
-		// Render purely via setImage: setState alone cannot clear a previous setImage override.
-		const image = !actionable(snapshot, "canToggleMute")
-			? IMAGE.disabled
-			: snapshot.state.isMuted
-				? IMAGE.muted
-				: IMAGE.live;
-		void target.setImage(image);
-	}
 }
+
