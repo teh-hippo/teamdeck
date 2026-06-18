@@ -10,9 +10,6 @@ export type ToggleSpec = {
 	images: ToggleImages;
 };
 
-/** A toggle spec plus the command that performs it. */
-export type ToggleConfig = ToggleSpec & { command: () => void };
-
 /**
  * Whether a key gated by the given permission can act, from a snapshot. Mirrors
  * protocol.actionable; kept here so this module stays dependency-free and node-testable.
