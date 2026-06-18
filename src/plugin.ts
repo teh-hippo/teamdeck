@@ -11,4 +11,7 @@ streamDeck.actions.registerAction(new Mute());
 
 // Register with Stream Deck first, then open the Teams connection so plugin registration is
 // never blocked by the external WebSocket.
-streamDeck.connect().then(() => teams.start());
+streamDeck
+	.connect()
+	.then(() => teams.start())
+	.catch((error) => streamDeck.logger.error(`Startup failed: ${error}`));
