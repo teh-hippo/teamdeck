@@ -28,6 +28,12 @@ const COLORS = {
   laugh: "#FBBF24",
   wow: "#C084FC",
   disabled: "#6B7280",
+  recording: "#D13438",
+  sharing: "#2563EB",
+  unread: "#F59E0B",
+  inmeeting: "#2EA043",
+  statusOff: "#5A6B7B",
+  unavailable: "#3D3D3D",
 };
 
 const GLYPH_BY_PATH = {
@@ -100,6 +106,27 @@ const ICONS = [
   ["imgs/actions/react/wow", 72, 144, "wow"],
   ["imgs/actions/react/disabled", 72, 144, "disabled"],
 ];
+
+// Read-only status tiles share one regular shape: a neutral action-list glyph plus on/off/
+// unavailable key images, coloured by status. Expanded here to avoid a second generator.
+const STATUS_TILES = [
+  ["recording", "record_24_filled.svg"],
+  ["sharing", "share_screen_start_24_filled.svg"],
+  ["unread", "chat_24_filled.svg"],
+  ["inmeeting", "people_24_filled.svg"],
+];
+for (const [tile, glyph] of STATUS_TILES) {
+  for (const [variant, base, retina, colorKey] of [
+    ["icon", 20, 40, "neutral"],
+    ["on", 72, 144, tile],
+    ["off", 72, 144, "statusOff"],
+    ["unavailable", 72, 144, "unavailable"],
+  ]) {
+    const rel = `imgs/actions/${tile}/${variant}`;
+    GLYPH_BY_PATH[rel] = glyph;
+    ICONS.push([rel, base, retina, colorKey]);
+  }
+}
 
 function glyphTemplate(inner, size) {
   return `<?xml version="1.0" encoding="UTF-8"?>
