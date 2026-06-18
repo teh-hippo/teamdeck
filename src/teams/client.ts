@@ -230,15 +230,24 @@ class TeamsClient {
 		void streamDeck.settings.setGlobalSettings<GlobalSettings>({ teamsToken: token });
 		streamDeck.logger.info("Teams pairing token stored.");
 		if (firstPairing) {
-			// Reconnect with the token to obtain an authorised session (verified flow).
-			this.#connect();
+			// Close the tokenless socket; the close handler reconnects once, now with the token.
+			// Closing rather than calling #connect() directly avoids two briefly-concurrent sockets.
+			this.#closeForReconnect();
 		}
 	}
 
 	#dropTokenAndRepair(): void {
 		this.#token = undefined;
 		void streamDeck.settings.setGlobalSettings<GlobalSettings>({});
-		this.#connect();
+		this.#closeForReconnect();
+	}
+
+	#closeForReconnect(): void {
+		try {
+			this.#ws?.close();
+		} catch {
+			// Ignore; the close handler schedules the single reconnect.
+		}
 	}
 
 	#send(action: string, parameters: Record<string, unknown> = {}): void {
