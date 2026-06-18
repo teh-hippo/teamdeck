@@ -1,97 +1,69 @@
-// Generates placeholder PNG icons for the teamdeck Stream Deck plugin.
-//
-// Pure Node (zlib only) so it runs natively on any platform/arch with no native deps.
-// Produces solid rounded-square icons in distinct colours per state, which is enough to
-// prove live state visually on the keys. Real glyph icons are a Phase 3 task.
+// Generates the TeamDeck Stream Deck PNG icon set from vendored Fluent system SVG glyphs.
 
-import { deflateSync } from "node:zlib";
-import { writeFileSync, mkdirSync } from "node:fs";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import sharp from "sharp";
+
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const sdPlugin = join(root, "io.github.teh-hippo.teamdeck.sdPlugin");
+const glyphDir = join(root, "tools", "icons", "glyphs");
+
+sharp.cache(false);
+sharp.concurrency(1);
 
 const COLORS = {
-  brand: "#4B4FBF", // placeholder brand (indigo); finalised in Phase 3
-  neutral: "#B0B3FF", // action list icon
-  on: "#2EA043", // active / unmuted / camera-on / blurred
-  off: "#D13438", // muted / camera-off / unblurred
-  raised: "#E3A008", // hand raised
-  lowered: "#5A6B7B", // hand lowered
-  leave: "#DC2626", // leave / hang up
-  like: "#2563EB",
-  love: "#EC4899",
-  applause: "#16A34A",
-  laugh: "#F59E0B",
-  wow: "#9333EA",
-  disabled: "#5A5A5A", // not in a meeting
+  neutralGlyph: "#242424",
+  tile: "#15171D",
+  tileStroke: "#2E3440",
+  on: "#3DDC84",
+  off: "#FF5A5F",
+  raised: "#F4B740",
+  lowered: "#8FA4B8",
+  leave: "#FF5A5F",
+  like: "#60A5FA",
+  love: "#F472B6",
+  applause: "#4ADE80",
+  laugh: "#FBBF24",
+  wow: "#C084FC",
+  disabled: "#6B7280",
 };
 
-// CRC32 (PNG chunk checksum).
-const crcTable = (() => {
-  const t = new Uint32Array(256);
-  for (let n = 0; n < 256; n++) {
-    let c = n;
-    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-    t[n] = c >>> 0;
-  }
-  return t;
-})();
-function crc32(buf) {
-  let c = 0xffffffff;
-  for (let i = 0; i < buf.length; i++) c = crcTable[(c ^ buf[i]) & 0xff] ^ (c >>> 8);
-  return (c ^ 0xffffffff) >>> 0;
-}
-
-function chunk(type, data) {
-  const len = Buffer.alloc(4);
-  len.writeUInt32BE(data.length, 0);
-  const body = Buffer.concat([Buffer.from(type, "ascii"), data]);
-  const crc = Buffer.alloc(4);
-  crc.writeUInt32BE(crc32(body), 0);
-  return Buffer.concat([len, body, crc]);
-}
-
-function hexToRgb(hex) {
-  const n = parseInt(hex.replace("#", ""), 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-}
-
-// Anti-aliased rounded-rect coverage at a pixel centre.
-function coverage(x, y, size, radius) {
-  const px = x + 0.5;
-  const py = y + 0.5;
-  const cx = px < radius ? radius : px > size - radius ? size - radius : px;
-  const cy = py < radius ? radius : py > size - radius ? size - radius : py;
-  const d = Math.hypot(px - cx, py - cy);
-  if (d <= radius - 0.5) return 255;
-  if (d >= radius + 0.5) return 0;
-  return Math.round((radius + 0.5 - d) * 255);
-}
-
-function makePng(size, hex) {
-  const [r, g, b] = hexToRgb(hex);
-  const radius = Math.max(2, size * 0.18);
-  const raw = Buffer.alloc(size * (size * 4 + 1));
-  let p = 0;
-  for (let y = 0; y < size; y++) {
-    raw[p++] = 0; // filter: none
-    for (let x = 0; x < size; x++) {
-      raw[p++] = r;
-      raw[p++] = g;
-      raw[p++] = b;
-      raw[p++] = coverage(x, y, size, radius);
-    }
-  }
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(size, 0);
-  ihdr.writeUInt32BE(size, 4);
-  ihdr[8] = 8; // bit depth
-  ihdr[9] = 6; // colour type: RGBA
-  const sig = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
-  return Buffer.concat([sig, chunk("IHDR", ihdr), chunk("IDAT", deflateSync(raw)), chunk("IEND", Buffer.alloc(0))]);
-}
+const GLYPH_BY_PATH = {
+  "imgs/plugin/marketplace": "video_24_filled.svg",
+  "imgs/plugin/category-icon": "video_24_filled.svg",
+  "imgs/actions/mute/icon": "mic_24_filled.svg",
+  "imgs/actions/mute/on": "mic_24_filled.svg",
+  "imgs/actions/mute/off": "mic_off_24_filled.svg",
+  "imgs/actions/mute/disabled": "mic_off_24_regular.svg",
+  "imgs/actions/camera/icon": "video_24_filled.svg",
+  "imgs/actions/camera/on": "video_24_filled.svg",
+  "imgs/actions/camera/off": "video_off_24_filled.svg",
+  "imgs/actions/camera/disabled": "video_off_24_regular.svg",
+  "imgs/actions/hand/icon": "hand_right_24_regular.svg",
+  "imgs/actions/hand/raised": "hand_right_24_filled.svg",
+  "imgs/actions/hand/lowered": "hand_right_24_regular.svg",
+  "imgs/actions/hand/disabled": "hand_right_24_regular.svg",
+  "imgs/actions/blur/icon": "video_background_effect_24_filled.svg",
+  "imgs/actions/blur/on": "video_background_effect_24_filled.svg",
+  "imgs/actions/blur/off": "video_background_effect_24_regular.svg",
+  "imgs/actions/blur/disabled": "video_background_effect_24_regular.svg",
+  "imgs/actions/leave/icon": "call_end_24_filled.svg",
+  "imgs/actions/leave/enabled": "call_end_24_filled.svg",
+  "imgs/actions/leave/disabled": "call_end_24_regular.svg",
+  "imgs/actions/react/like-icon": "thumb_like_24_filled.svg",
+  "imgs/actions/react/like": "thumb_like_24_filled.svg",
+  "imgs/actions/react/love-icon": "heart_24_filled.svg",
+  "imgs/actions/react/love": "heart_24_filled.svg",
+  "imgs/actions/react/applause-icon": "hand_multiple_24_filled.svg",
+  "imgs/actions/react/applause": "hand_multiple_24_filled.svg",
+  "imgs/actions/react/laugh-icon": "emoji_laugh_24_filled.svg",
+  "imgs/actions/react/laugh": "emoji_laugh_24_filled.svg",
+  "imgs/actions/react/wow-icon": "emoji_surprise_24_filled.svg",
+  "imgs/actions/react/wow": "emoji_surprise_24_filled.svg",
+  "imgs/actions/react/disabled": "thumb_like_24_filled.svg",
+};
 
 // [relative path (no extension), base size, retina size, colour key]
 const ICONS = [
@@ -129,12 +101,68 @@ const ICONS = [
   ["imgs/actions/react/disabled", 72, 144, "disabled"],
 ];
 
-for (const [rel, base, retina, colorKey] of ICONS) {
-  const hex = COLORS[colorKey];
+function glyphTemplate(inner, size) {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="${size}" height="${size}" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(3 3) scale(0.75)" fill="${COLORS.neutralGlyph}">${inner}</g>
+</svg>`;
+}
+
+function keyTemplate(inner, size, color) {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="${size}" height="${size}" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+  <rect x="5" y="5" width="62" height="62" rx="16" fill="${COLORS.tile}"/>
+  <rect x="5.75" y="5.75" width="60.5" height="60.5" rx="15.25" fill="none" stroke="${COLORS.tileStroke}" stroke-width="1.5"/>
+  <circle cx="36" cy="36" r="22" fill="${color}" opacity="0.14"/>
+  <g transform="translate(18 18) scale(1.5)" fill="${color}">${inner}</g>
+</svg>`;
+}
+
+function iconColor(colorKey, isGlyph) {
+  if (isGlyph) {
+    return COLORS.neutralGlyph;
+  }
+  return COLORS[colorKey] ?? COLORS.disabled;
+}
+
+function isKeyIcon(base, retina) {
+  return base === 72 && retina === 144;
+}
+
+async function readGlyph(filename) {
+  const svg = await readFile(join(glyphDir, filename), "utf8");
+  const match = svg.match(/<svg\b[^>]*>([\s\S]*)<\/svg>/i);
+  if (!match) {
+    throw new Error(`Cannot read glyph content from ${filename}`);
+  }
+  return match[1];
+}
+
+async function renderPng(svg, size) {
+  return sharp(Buffer.from(svg))
+    .resize(size, size, { fit: "fill" })
+    .png({ compressionLevel: 9, palette: false, adaptiveFiltering: false })
+    .withMetadata({})
+    .toBuffer();
+}
+
+async function writeIcon(rel, size, colorKey, suffix) {
+  const glyphName = GLYPH_BY_PATH[rel];
+  if (!glyphName) {
+    throw new Error(`No glyph mapped for ${rel}`);
+  }
+  const isGlyph = !isKeyIcon(...ICONS.find(([iconRel]) => iconRel === rel).slice(1, 3));
+  const inner = await readGlyph(glyphName);
+  const color = iconColor(colorKey, isGlyph);
+  const svg = isGlyph ? glyphTemplate(inner, size) : keyTemplate(inner, size, color);
   const out = join(sdPlugin, rel);
-  mkdirSync(dirname(out), { recursive: true });
-  writeFileSync(`${out}.png`, makePng(base, hex));
-  writeFileSync(`${out}@2x.png`, makePng(retina, hex));
+  await mkdir(dirname(out), { recursive: true });
+  await writeFile(`${out}${suffix}.png`, await renderPng(svg, size));
+}
+
+for (const [rel, base, retina, colorKey] of ICONS) {
+  await writeIcon(rel, base, colorKey, "");
+  await writeIcon(rel, retina, colorKey, "@2x");
   console.log(`wrote ${rel}.png (${base}) and @2x (${retina})`);
 }
 console.log("done");
