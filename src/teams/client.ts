@@ -92,6 +92,12 @@ class TeamsClient {
 
 	toggleBlur(): void {
 		this.#send("toggle-background-blur");
+		// Teams does not echo blur changes, so optimistically flip the cached value and emit so
+		// the key reflects the toggle. A later full snapshot reconciles the real value.
+		if (this.#state.isInMeeting) {
+			this.#state = { ...this.#state, isBackgroundBlurred: !this.#state.isBackgroundBlurred };
+			this.#emit();
+		}
 	}
 
 	leave(): void {

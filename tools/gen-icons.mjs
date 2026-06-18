@@ -15,10 +15,16 @@ const sdPlugin = join(root, "io.github.teh-hippo.teamdeck.sdPlugin");
 const COLORS = {
   brand: "#4B4FBF", // placeholder brand (indigo); finalised in Phase 3
   neutral: "#B0B3FF", // action list icon
-  on: "#2EA043", // active / unmuted / camera-on
-  off: "#D13438", // muted / camera-off
+  on: "#2EA043", // active / unmuted / camera-on / blurred
+  off: "#D13438", // muted / camera-off / unblurred
   raised: "#E3A008", // hand raised
   lowered: "#5A6B7B", // hand lowered
+  leave: "#DC2626", // leave / hang up
+  like: "#2563EB",
+  love: "#EC4899",
+  applause: "#16A34A",
+  laugh: "#F59E0B",
+  wow: "#9333EA",
   disabled: "#5A5A5A", // not in a meeting
 };
 
@@ -103,6 +109,24 @@ const ICONS = [
   ["imgs/actions/hand/raised", 72, 144, "raised"],
   ["imgs/actions/hand/lowered", 72, 144, "lowered"],
   ["imgs/actions/hand/disabled", 72, 144, "disabled"],
+  ["imgs/actions/blur/icon", 20, 40, "neutral"],
+  ["imgs/actions/blur/on", 72, 144, "on"],
+  ["imgs/actions/blur/off", 72, 144, "off"],
+  ["imgs/actions/blur/disabled", 72, 144, "disabled"],
+  ["imgs/actions/leave/icon", 20, 40, "leave"],
+  ["imgs/actions/leave/enabled", 72, 144, "leave"],
+  ["imgs/actions/leave/disabled", 72, 144, "disabled"],
+  ["imgs/actions/react/like-icon", 20, 40, "like"],
+  ["imgs/actions/react/like", 72, 144, "like"],
+  ["imgs/actions/react/love-icon", 20, 40, "love"],
+  ["imgs/actions/react/love", 72, 144, "love"],
+  ["imgs/actions/react/applause-icon", 20, 40, "applause"],
+  ["imgs/actions/react/applause", 72, 144, "applause"],
+  ["imgs/actions/react/laugh-icon", 20, 40, "laugh"],
+  ["imgs/actions/react/laugh", 72, 144, "laugh"],
+  ["imgs/actions/react/wow-icon", 20, 40, "wow"],
+  ["imgs/actions/react/wow", 72, 144, "wow"],
+  ["imgs/actions/react/disabled", 72, 144, "disabled"],
 ];
 
 for (const [rel, base, retina, colorKey] of ICONS) {
