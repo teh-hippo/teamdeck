@@ -1,11 +1,8 @@
 import streamDeck from "@elgato/streamdeck";
 
-import { Blur } from "./actions/blur";
-import { Camera } from "./actions/camera";
-import { Hand } from "./actions/hand";
 import { Leave } from "./actions/leave";
-import { Mute } from "./actions/mute";
 import { Applause, Laugh, Like, Love, Surprised } from "./actions/reactions";
+import { Blur, Camera, Hand, Mute } from "./actions/toggles";
 import { InMeeting, Recording, Sharing, Unread } from "./actions/status-tiles";
 import { teams } from "./teams/client";
 import { registerPropertyInspector } from "./ui";
