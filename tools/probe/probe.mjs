@@ -109,7 +109,14 @@ function ingest(raw) {
   }
   record("in", msg);
   const update = msg.meetingUpdate;
-  if (update?.meetingState) for (const [k, v] of Object.entries(update.meetingState)) seen.stateFields[k] = v;
+  if (update?.meetingState) {
+    const changed = [];
+    for (const [k, v] of Object.entries(update.meetingState)) {
+      if (seen.stateFields[k] !== v) changed.push(`${k}=${v}`);
+      seen.stateFields[k] = v;
+    }
+    if (changed.length) note("state-change", { changed });
+  }
   if (update?.meetingPermissions) for (const [k, v] of Object.entries(update.meetingPermissions)) seen.permissionFields[k] = v;
   if (msg.tokenRefresh) note("token-refresh-received", { length: String(msg.tokenRefresh).length });
   if (msg.errorMsg) note("error-msg", { errorMsg: msg.errorMsg, requestId: msg.requestId });
