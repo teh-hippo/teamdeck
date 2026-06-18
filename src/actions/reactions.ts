@@ -1,21 +1,22 @@
 import { action } from "@elgato/streamdeck";
 
 import { teams } from "../teams/client";
-import { type FireConfig, FireAction } from "./fire-action";
-import { REACTIONS } from "./toggle";
+import { type KeyConfig, MeetingKeyAction } from "./key-action";
+import { isActionable, REACTIONS } from "./toggle";
 
-/** Builds a reaction's FireConfig from a REACTIONS entry: gated on canReact, with its icon. */
-function reaction(spec: (typeof REACTIONS)[keyof typeof REACTIONS]): FireConfig {
+/** Builds a reaction's KeyConfig: gated on canReact, showing its icon when actionable. */
+function reaction(spec: (typeof REACTIONS)[keyof typeof REACTIONS]): KeyConfig {
+	const enabled = `imgs/actions/react/${spec.image}`;
 	return {
 		permission: "canReact",
 		command: () => teams.react(spec.type),
-		images: { enabled: `imgs/actions/react/${spec.image}`, disabled: "imgs/actions/react/disabled" },
+		imageFor: (s) => (isActionable(s, "canReact") ? enabled : "imgs/actions/react/disabled"),
 	};
 }
 
 /** Sends an applause reaction. */
 @action({ UUID: "io.github.teh-hippo.teamdeck.applause" })
-export class Applause extends FireAction {
+export class Applause extends MeetingKeyAction {
 	constructor() {
 		super(reaction(REACTIONS.applause));
 	}
@@ -23,7 +24,7 @@ export class Applause extends FireAction {
 
 /** Sends a laugh reaction. */
 @action({ UUID: "io.github.teh-hippo.teamdeck.laugh" })
-export class Laugh extends FireAction {
+export class Laugh extends MeetingKeyAction {
 	constructor() {
 		super(reaction(REACTIONS.laugh));
 	}
@@ -31,7 +32,7 @@ export class Laugh extends FireAction {
 
 /** Sends a like reaction. */
 @action({ UUID: "io.github.teh-hippo.teamdeck.like" })
-export class Like extends FireAction {
+export class Like extends MeetingKeyAction {
 	constructor() {
 		super(reaction(REACTIONS.like));
 	}
@@ -39,7 +40,7 @@ export class Like extends FireAction {
 
 /** Sends a love reaction. */
 @action({ UUID: "io.github.teh-hippo.teamdeck.love" })
-export class Love extends FireAction {
+export class Love extends MeetingKeyAction {
 	constructor() {
 		super(reaction(REACTIONS.love));
 	}
@@ -47,9 +48,8 @@ export class Love extends FireAction {
 
 /** Sends a "Surprised" reaction (the API's `wow`). */
 @action({ UUID: "io.github.teh-hippo.teamdeck.surprised" })
-export class Surprised extends FireAction {
+export class Surprised extends MeetingKeyAction {
 	constructor() {
 		super(reaction(REACTIONS.surprised));
 	}
 }
-
