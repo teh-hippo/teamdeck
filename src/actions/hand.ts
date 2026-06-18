@@ -1,6 +1,7 @@
 import { action } from "@elgato/streamdeck";
 
 import { teams } from "../teams/client";
+import { HAND } from "./toggle";
 import { ToggleAction } from "./toggle-action";
 
 /**
@@ -10,15 +11,7 @@ import { ToggleAction } from "./toggle-action";
 @action({ UUID: "io.github.teh-hippo.teamdeck.hand" })
 export class Hand extends ToggleAction {
 	constructor() {
-		super({
-			permission: "canToggleHand",
-			stateField: "isHandRaised",
-			command: () => teams.toggleHand(),
-			images: {
-				whenTrue: "imgs/actions/hand/raised",
-				whenFalse: "imgs/actions/hand/lowered",
-				disabled: "imgs/actions/hand/disabled",
-			},
-		});
+		super({ ...HAND, command: () => teams.toggleHand() });
 	}
 }
+
