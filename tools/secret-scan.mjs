@@ -7,9 +7,11 @@
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync, statSync } from "node:fs";
 
-const UUID = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
-const SECRET = new RegExp(`(tokenRefresh|teamsToken|["']token["']|[?&]token=)["'\\s:=]{0,4}${UUID}`);
-const REDACTED = /<redacted:/;
+const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+// Case-insensitive: catches token / teamsToken / tokenRefresh / TEAMS_TOKEN as `:` or `=`
+// assignments, quoted or bare, and `?token=` URL params. Redacted forms contain no UUID, so
+// they never match.
+const SECRET = new RegExp(`(token|teamstoken|tokenrefresh)["'\\s]*[:=]\\s*["']?${UUID}`, "i");
 
 const staged = execSync("git diff --cached --name-only --diff-filter=ACM", { encoding: "utf8" })
 	.split("\n")
@@ -28,7 +30,7 @@ for (const file of staged) {
 		continue;
 	}
 	text.split(/\r?\n/).forEach((line, i) => {
-		if (!REDACTED.test(line) && SECRET.test(line)) {
+		if (SECRET.test(line)) {
 			findings.push(`${file}:${i + 1}`);
 		}
 	});
