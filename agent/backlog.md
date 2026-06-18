@@ -22,7 +22,7 @@ Legend: [x] done · [~] in progress · [ ] pending
 - [x] p1-base-action — ToggleAction base; setImage-driven live state; replay-on-appear
 - [x] p1-mute-camera-hand — Mute, Camera, Raise Hand echoed live-state toggles
 - [x] p1-deterministic-tests — protocol unit + fixture-replay suite (10 tests) in the Tier A gate
-- [ ] p1-gate — expert + human review
+- [x] p1-gate — expert + human review (Mute/Camera/Hand verified live)
 
 ## Phase 2 — Reach original 10-action parity
 
@@ -35,11 +35,22 @@ Legend: [x] done · [~] in progress · [ ] pending
 ## Phase 3 — Faithful UX, packaging, OSS release
 
 - [x] p3-branding — name/UUID/disclaimer set; trademark checked; placeholder icons (final art deferred)
-- [ ] p3-property-inspector — root PI (pairing status, re-pair) [pending direction]
-- [ ] p3-neo-profile — 2-page Neo profile (10 actions over 8 keys) [pending direction]
+- [x] p3-property-inspector — root PI (live pairing status + re-pair); verified runtime-clean
+- [ ] p3-neo-profile — 2-page Neo profile (10 actions over 8 keys)
 - [~] p3-package-release — README + LICENSE + pack verified; final icons/profile + publish pending
-- [ ] p3-gate — expert + human review
+- [ ] p3-gate — expert + human review (folded in around the holistic review)
 
 ## Phase 4 — Optional stretch (beyond original), isolated
 
-- [ ] p4-stretch — screen-share, chat toggle, status tiles, Smart Profile auto-switch
+- [ ] p4-stretch — screen-share, chat toggle, status tiles, Smart Profile auto-switch [Stream B]
+
+## Polished icons (parallel worktree, Stream A)
+
+- [ ] icons-fluent — polished Fluent-style icons for all 10 actions x on/off/unavailable
+
+## Holistic review (after Streams A + B merge)
+
+- [ ] hr-reduce — reduce code without breaking functionality; re-run full proof gate
+- [ ] hr-tests — audit/extend deterministic unit tests for quality coverage
+- [ ] hr-ci — GitHub Actions CI (build, validate, test, secret-scan, lint)
+- [ ] hr-lint — ESLint/Prettier + JS/TS best practices, wired into CI and the gate
