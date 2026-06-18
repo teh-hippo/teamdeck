@@ -6,6 +6,8 @@ node_modules/
 /dist/
 /build/
 *.streamDeckPlugin
+io.github.teh-hippo.teamdeck.sdPlugin/bin/
+io.github.teh-hippo.teamdeck.sdPlugin/logs/
 
 # Logs
 *.log
