@@ -1,0 +1,48 @@
+{
+	"Name": "TeamDeck",
+	"Version": "0.1.0.0",
+	"Author": "teh-hippo",
+	"Actions": [
+		{
+			"Name": "Mute",
+			"UUID": "io.github.teh-hippo.teamdeck.mute",
+			"Icon": "imgs/actions/mute/icon",
+			"Tooltip": "Toggle your Microsoft Teams microphone.",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/mute/on",
+					"Name": "Live",
+					"TitleAlignment": "middle"
+				},
+				{
+					"Image": "imgs/actions/mute/off",
+					"Name": "Muted",
+					"TitleAlignment": "middle"
+				}
+			]
+		}
+	],
+	"Category": "TeamDeck",
+	"CategoryIcon": "imgs/plugin/category-icon",
+	"CodePath": "bin/plugin.js",
+	"Description": "Control Microsoft Teams meetings from your Stream Deck, using the Teams third-party app API. Not affiliated with Microsoft or Elgato.",
+	"Icon": "imgs/plugin/marketplace",
+	"SDKVersion": 3,
+	"Software": {
+		"MinimumVersion": "7.1"
+	},
+	"OS": [
+		{
+			"Platform": "windows",
+			"MinimumVersion": "10"
+		}
+	],
+	"Nodejs": {
+		"Version": "24",
+		"Debug": "enabled"
+	},
+	"UUID": "io.github.teh-hippo.teamdeck"
+}
