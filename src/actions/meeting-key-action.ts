@@ -21,7 +21,10 @@ export abstract class MeetingKeyAction extends SingletonAction {
 	constructor() {
 		super();
 		// Re-render every visible instance whenever Teams state changes. The initial render is
-		// handled by onWillAppear; no instances are visible yet at construction.
+		// handled by onWillAppear. NB: subscribe replays a snapshot synchronously here, before a
+		// subclass constructor has set its config; this is safe only because this.actions is empty
+		// at construction (so imageFor is never called). Keep this callback dependent only on
+		// this.actions, never on subclass fields.
 		teams.subscribe((snapshot) => {
 			for (const visible of this.actions) {
 				this.#render(visible, snapshot);

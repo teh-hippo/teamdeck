@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { BLUR, CAMERA, HAND, isActionable, MUTE, selectImage, type ToggleSpec } from "../src/actions/toggle.ts";
+import { BLUR, CAMERA, HAND, isActionable, MUTE, REACTIONS, selectImage, type ToggleSpec } from "../src/actions/toggle.ts";
 import type { TeamsSnapshot } from "../src/teams/types.ts";
 
 function snap(state: Record<string, boolean>, permission: string): TeamsSnapshot {
@@ -27,6 +27,14 @@ for (const { name, spec, whenTrue } of cases) {
 test("Mute uses the inverted mapping (muted shows the red/off image)", () => {
 	assert.equal(MUTE.images.whenTrue, "imgs/actions/mute/off");
 	assert.equal(MUTE.images.whenFalse, "imgs/actions/mute/on");
+});
+
+test("reactions map to the verified wire types (Surprised => wow)", () => {
+	assert.equal(REACTIONS.applause.type, "applause");
+	assert.equal(REACTIONS.laugh.type, "laugh");
+	assert.equal(REACTIONS.like.type, "like");
+	assert.equal(REACTIONS.love.type, "love");
+	assert.equal(REACTIONS.surprised.type, "wow");
 });
 
 test("isActionable gates on connected, in a meeting, and the permission", () => {

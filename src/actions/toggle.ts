@@ -1,4 +1,4 @@
-import type { MeetingPermissions, MeetingState, TeamsSnapshot } from "../teams/types";
+import type { MeetingPermissions, MeetingState, ReactionType, TeamsSnapshot } from "../teams/types";
 
 /** Key images for a toggle, by logical state. */
 export type ToggleImages = { whenTrue: string; whenFalse: string; disabled: string };
@@ -72,3 +72,12 @@ export const BLUR: ToggleSpec = {
 		disabled: "imgs/actions/blur/disabled",
 	},
 };
+
+/** The five Teams reactions: action key → wire type (verified live) and icon name. */
+export const REACTIONS = {
+	applause: { type: "applause", image: "applause" },
+	laugh: { type: "laugh", image: "laugh" },
+	like: { type: "like", image: "like" },
+	love: { type: "love", image: "love" },
+	surprised: { type: "wow", image: "wow" },
+} as const satisfies Record<string, { type: ReactionType; image: string }>;

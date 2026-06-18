@@ -1,7 +1,7 @@
 import streamDeck from "@elgato/streamdeck";
 
 import identity from "../../shared/identity.json";
-import { actionable, buildUrl, mergePermissions, mergeState, pairingDecision, parseMessage } from "./protocol";
+import { actionable, buildUrl, mergePermissions, mergeState, pairingDecision, parseMessage, toggleBlurState } from "./protocol";
 import type { MeetingPermissions, MeetingState, ReactionType, TeamsSnapshot } from "./types";
 
 const MAX_RECONNECT_DELAY = 30_000;
@@ -91,11 +91,10 @@ class TeamsClient {
 	}
 
 	toggleBlur(): void {
-		this.#send("toggle-background-blur");
-		// Teams does not echo blur changes, so optimistically flip the cached value and emit so
-		// the key reflects the toggle. A later full snapshot reconciles the real value.
-		if (this.#state.isInMeeting) {
-			this.#state = { ...this.#state, isBackgroundBlurred: !this.#state.isBackgroundBlurred };
+		// Teams does not echo blur, so once the command is actually sent, optimistically flip the
+		// cached value and emit so the key reflects it. A later full snapshot reconciles the truth.
+		if (this.#send("toggle-background-blur") && this.#state.isInMeeting) {
+			this.#state = toggleBlurState(this.#state);
 			this.#emit();
 		}
 	}
@@ -202,6 +201,9 @@ class TeamsClient {
 		}
 
 		// Observed messages are full snapshots; merge defensively in case a partial ever arrives.
+		// Out of a meeting Teams sends permissions only, so cached meetingState (isInMeeting, blur)
+		// can be stale until the next full snapshot; every key also gates on a permission, which
+		// goes false out of a meeting, so the stale state is never rendered.
 		this.#permissions = mergePermissions(this.#permissions, update.meetingPermissions);
 		this.#state = mergeState(this.#state, update.meetingState);
 
@@ -255,15 +257,16 @@ class TeamsClient {
 		}
 	}
 
-	#send(action: string, parameters: Record<string, unknown> = {}): void {
+	#send(action: string, parameters: Record<string, unknown> = {}): boolean {
 		if (!this.#ws || this.#ws.readyState !== WebSocket.OPEN) {
 			streamDeck.logger.warn(`Cannot send "${action}": Teams not connected.`);
 			if (!this.#connected) {
 				this.#connect();
 			}
-			return;
+			return false;
 		}
 		this.#ws.send(JSON.stringify({ action, parameters, requestId: ++this.#requestId }));
+		return true;
 	}
 
 	#emit(): void {

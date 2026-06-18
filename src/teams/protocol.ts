@@ -65,6 +65,11 @@ export function mergePermissions(
 	return delta ? { ...prev, ...delta } : prev;
 }
 
+/** Optimistically toggles cached background blur (Teams does not echo blur changes). */
+export function toggleBlurState(state: Partial<MeetingState>): Partial<MeetingState> {
+	return { ...state, isBackgroundBlurred: !state.isBackgroundBlurred };
+}
+
 /** Pairing decision from the current token and the latest canPair flag. */
 export function pairingDecision(hasToken: boolean, canPair: boolean | undefined): PairingDecision {
 	if (canPair !== true) {
