@@ -6,6 +6,7 @@ import { Hand } from "./actions/hand";
 import { Leave } from "./actions/leave";
 import { Mute } from "./actions/mute";
 import { Applause, Laugh, Like, Love, Surprised } from "./actions/reactions";
+import { InMeeting, Recording, Sharing, Unread } from "./actions/status-tiles";
 import { teams } from "./teams/client";
 import { registerPropertyInspector } from "./ui";
 
@@ -23,6 +24,10 @@ streamDeck.actions.registerAction(new Laugh());
 streamDeck.actions.registerAction(new Like());
 streamDeck.actions.registerAction(new Love());
 streamDeck.actions.registerAction(new Surprised());
+streamDeck.actions.registerAction(new Recording());
+streamDeck.actions.registerAction(new Sharing());
+streamDeck.actions.registerAction(new Unread());
+streamDeck.actions.registerAction(new InMeeting());
 
 // Register with Stream Deck first, then open the Teams connection so plugin registration is
 // never blocked by the external WebSocket.
