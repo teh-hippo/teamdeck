@@ -1,25 +1,13 @@
 import streamDeck from "@elgato/streamdeck";
 
 import identity from "../../shared/identity.json";
+import { actionable, buildUrl, mergePermissions, mergeState, pairingDecision, parseMessage } from "./protocol";
 import type { MeetingPermissions, MeetingState, ReactionType, TeamsSnapshot } from "./types";
 
-const HOST = "ws://127.0.0.1:8124";
-const PROTOCOL_VERSION = "2.0.0";
 const MAX_RECONNECT_DELAY = 30_000;
 
 type GlobalSettings = { teamsToken?: string };
 type Listener = (snapshot: TeamsSnapshot) => void;
-
-type ServerMessage = {
-	tokenRefresh?: string;
-	requestId?: number;
-	response?: string;
-	errorMsg?: string;
-	meetingUpdate?: {
-		meetingState?: Partial<MeetingState>;
-		meetingPermissions?: Partial<MeetingPermissions>;
-	};
-};
 
 /**
  * Single shared connection to the Microsoft Teams third-party app API.
@@ -70,14 +58,17 @@ class TeamsClient {
 		this.#connect();
 	}
 
-	/** Whether a command gated by the given permission can be sent right now. */
-	/** Forces a fresh connection, e.g. to recover a stale socket from a key press. */
+	/** Forces a fresh connection, e.g. to recover a stale socket or re-trigger pairing. */
 	reconnect(): void {
+		if (this.#ws?.readyState === WebSocket.CONNECTING) {
+			return;
+		}
 		this.#connect();
 	}
 
+	/** Whether a command gated by the given permission can be sent right now. */
 	isActionable(permission: keyof MeetingPermissions): boolean {
-		return this.#connected && Boolean(this.#state.isInMeeting) && Boolean(this.#permissions[permission]);
+		return actionable(this.snapshot, permission);
 	}
 
 	toggleMute(): void {
@@ -105,17 +96,7 @@ class TeamsClient {
 	}
 
 	#url(): string {
-		const params = new URLSearchParams({
-			"protocol-version": PROTOCOL_VERSION,
-			manufacturer: identity.manufacturer,
-			device: identity.device,
-			app: identity.app,
-			"app-version": identity.appVersion,
-		});
-		if (this.#token) {
-			params.set("token", this.#token);
-		}
-		return `${HOST}?${params.toString()}`;
+		return buildUrl(identity, this.#token);
 	}
 
 	#connect(): void {
@@ -128,7 +109,14 @@ class TeamsClient {
 		} catch {
 			// ignore
 		}
+		// Reset connection state here. On a manual reconnect the abort above suppresses the old
+		// socket's close handler, so clear the caches now to avoid emitting a stale, actionable
+		// snapshot during the reconnect window.
 		this.#pairing = false;
+		this.#connected = false;
+		this.#state = {};
+		this.#permissions = {};
+		this.#emit();
 
 		const paired = Boolean(this.#token);
 		const abort = new AbortController();
@@ -182,10 +170,8 @@ class TeamsClient {
 	}
 
 	#onMessage(raw: string): void {
-		let message: ServerMessage;
-		try {
-			message = JSON.parse(raw) as ServerMessage;
-		} catch {
+		const message = parseMessage(raw);
+		if (!message) {
 			return;
 		}
 
@@ -193,31 +179,37 @@ class TeamsClient {
 			this.#onToken(message.tokenRefresh);
 			return;
 		}
+		if (message.errorMsg) {
+			streamDeck.logger.warn(`Teams error: ${message.errorMsg} (requestId=${message.requestId}).`);
+		}
 
 		const update = message.meetingUpdate;
 		if (!update) {
 			return;
 		}
 
-		// Permissions and state arrive independently and as partial deltas; merge each onto the
-		// cached value rather than replacing, so omitted fields are preserved.
-		if (update.meetingPermissions) {
-			this.#permissions = { ...this.#permissions, ...update.meetingPermissions };
-		}
-		if (update.meetingState) {
-			this.#state = { ...this.#state, ...update.meetingState };
-		}
+		// Observed messages are full snapshots; merge defensively in case a partial ever arrives.
+		this.#permissions = mergePermissions(this.#permissions, update.meetingPermissions);
+		this.#state = mergeState(this.#state, update.meetingState);
 
 		const canPair = update.meetingPermissions?.canPair;
-		if (this.#token && canPair === true) {
-			streamDeck.logger.warn("Teams token rejected; re-pairing.");
-			this.#dropTokenAndRepair();
-			return;
+		if (canPair === false) {
+			// Allow a future pairing attempt, e.g. after the user dismissed the previous prompt.
+			this.#pairing = false;
 		}
-		if (!this.#token && canPair === true && !this.#pairing) {
-			this.#pairing = true;
-			streamDeck.logger.info("Requesting Teams pairing; approve the prompt in Teams.");
-			this.#send("pair");
+
+		switch (pairingDecision(Boolean(this.#token), canPair)) {
+			case "repair":
+				streamDeck.logger.warn("Teams token rejected; re-pairing.");
+				this.#dropTokenAndRepair();
+				return;
+			case "pair":
+				if (!this.#pairing) {
+					this.#pairing = true;
+					streamDeck.logger.info("Requesting Teams pairing; approve the prompt in Teams.");
+					this.#send("pair");
+				}
+				break;
 		}
 
 		this.#emit();
