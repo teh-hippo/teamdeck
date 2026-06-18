@@ -15,6 +15,7 @@
 		"icons": "node tools/gen-icons.mjs",
 		"validate": "streamdeck validate io.github.teh-hippo.teamdeck.sdPlugin",
 		"pack": "streamdeck pack io.github.teh-hippo.teamdeck.sdPlugin",
+		"test": "node --test \"tests/*.test.ts\"",
 		"proof": "node tools/proof-gate.mjs",
 		"secret-scan": "node tools/secret-scan.mjs",
 		"hooks": "node tools/install-hooks.mjs",
