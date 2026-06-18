@@ -1,6 +1,7 @@
 import { action, type DialAction, type KeyAction, SingletonAction, type WillAppearEvent } from "@elgato/streamdeck";
 
 import { teams } from "../teams/client";
+import { actionable } from "../teams/protocol";
 import type { TeamsSnapshot } from "../teams/types";
 
 const IMAGE = {
@@ -34,8 +35,9 @@ export class Mute extends SingletonAction {
 	override onKeyDown(): void {
 		if (teams.isActionable("canToggleMute")) {
 			teams.toggleMute();
-		} else if (!teams.snapshot.connected) {
-			// Recover a possibly-stale socket on press.
+		} else {
+			// Not actionable (stale socket, or a missed pairing prompt): poke a reconnect, which
+			// re-triggers pairing while in a meeting.
 			teams.reconnect();
 		}
 	}
@@ -44,10 +46,12 @@ export class Mute extends SingletonAction {
 		if (!target.isKey()) {
 			return;
 		}
-		const actionable =
-			snapshot.connected && Boolean(snapshot.state.isInMeeting) && Boolean(snapshot.permissions.canToggleMute);
 		// Render purely via setImage: setState alone cannot clear a previous setImage override.
-		const image = !actionable ? IMAGE.disabled : snapshot.state.isMuted ? IMAGE.muted : IMAGE.live;
+		const image = !actionable(snapshot, "canToggleMute")
+			? IMAGE.disabled
+			: snapshot.state.isMuted
+				? IMAGE.muted
+				: IMAGE.live;
 		void target.setImage(image);
 	}
 }
