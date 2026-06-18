@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Build output
+/bin/
+/dist/
+/build/
+*.streamDeckPlugin
+
+# Logs
+*.log
+logs/
+
+# Secrets and pairing tokens (NEVER commit)
+.env
+.env.*
+agent/progress/probe-token.json
+**/*.secret.json
+
+# OS
+.DS_Store
+Thumbs.db
