@@ -61,3 +61,14 @@ export const HAND: ToggleSpec = {
 		disabled: "imgs/actions/hand/disabled",
 	},
 };
+
+/** Background Blur: blurred (isBackgroundBlurred) shows green, unblurred shows red. */
+export const BLUR: ToggleSpec = {
+	permission: "canToggleBlur",
+	stateField: "isBackgroundBlurred",
+	images: {
+		whenTrue: "imgs/actions/blur/on",
+		whenFalse: "imgs/actions/blur/off",
+		disabled: "imgs/actions/blur/disabled",
+	},
+};

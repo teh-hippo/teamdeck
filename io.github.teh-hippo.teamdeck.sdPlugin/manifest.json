@@ -65,6 +65,117 @@
 					"TitleAlignment": "middle"
 				}
 			]
+		},
+		{
+			"Name": "Background Blur",
+			"UUID": "io.github.teh-hippo.teamdeck.blur",
+			"Icon": "imgs/actions/blur/icon",
+			"Tooltip": "Toggle background blur in Microsoft Teams.",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/blur/off",
+					"Name": "Off",
+					"TitleAlignment": "middle"
+				},
+				{
+					"Image": "imgs/actions/blur/on",
+					"Name": "On",
+					"TitleAlignment": "middle"
+				}
+			]
+		},
+		{
+			"Name": "Leave",
+			"UUID": "io.github.teh-hippo.teamdeck.leave",
+			"Icon": "imgs/actions/leave/icon",
+			"Tooltip": "Leave the current Microsoft Teams meeting.",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/leave/enabled",
+					"TitleAlignment": "middle"
+				}
+			]
+		},
+		{
+			"Name": "Applause",
+			"UUID": "io.github.teh-hippo.teamdeck.applause",
+			"Icon": "imgs/actions/react/applause-icon",
+			"Tooltip": "Send an applause reaction in Microsoft Teams.",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/react/applause",
+					"TitleAlignment": "middle"
+				}
+			]
+		},
+		{
+			"Name": "Laugh",
+			"UUID": "io.github.teh-hippo.teamdeck.laugh",
+			"Icon": "imgs/actions/react/laugh-icon",
+			"Tooltip": "Send a laugh reaction in Microsoft Teams.",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/react/laugh",
+					"TitleAlignment": "middle"
+				}
+			]
+		},
+		{
+			"Name": "Like",
+			"UUID": "io.github.teh-hippo.teamdeck.like",
+			"Icon": "imgs/actions/react/like-icon",
+			"Tooltip": "Send a like reaction in Microsoft Teams.",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/react/like",
+					"TitleAlignment": "middle"
+				}
+			]
+		},
+		{
+			"Name": "Love",
+			"UUID": "io.github.teh-hippo.teamdeck.love",
+			"Icon": "imgs/actions/react/love-icon",
+			"Tooltip": "Send a love reaction in Microsoft Teams.",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/react/love",
+					"TitleAlignment": "middle"
+				}
+			]
+		},
+		{
+			"Name": "Surprised",
+			"UUID": "io.github.teh-hippo.teamdeck.surprised",
+			"Icon": "imgs/actions/react/wow-icon",
+			"Tooltip": "Send a surprised reaction in Microsoft Teams.",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/react/wow",
+					"TitleAlignment": "middle"
+				}
+			]
 		}
 	],
 	"Category": "TeamDeck",
