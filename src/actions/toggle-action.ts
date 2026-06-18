@@ -1,20 +1,14 @@
-import { type DialAction, type KeyAction, SingletonAction, type WillAppearEvent } from "@elgato/streamdeck";
+import {
+	type DialAction,
+	type KeyAction,
+	SingletonAction,
+	type WillAppearEvent,
+	type WillDisappearEvent,
+} from "@elgato/streamdeck";
 
 import { teams } from "../teams/client";
-import { actionable } from "../teams/protocol";
-import type { MeetingPermissions, MeetingState, TeamsSnapshot } from "../teams/types";
-
-/** Declarative configuration for a two-state, live-state Teams toggle key. */
-export type ToggleConfig = {
-	/** Permission that gates the key and the command. */
-	permission: keyof MeetingPermissions;
-	/** Meeting state field that drives the on/off image. */
-	stateField: keyof MeetingState;
-	/** Sends the toggle command to Teams. */
-	command: () => void;
-	/** Key images by logical state. */
-	images: { whenTrue: string; whenFalse: string; disabled: string };
-};
+import type { TeamsSnapshot } from "../teams/types";
+import { selectImage, type ToggleConfig } from "./toggle";
 
 /**
  * Base class for a Teams toggle action. Subscribes to the shared client, mirrors live meeting
@@ -24,6 +18,7 @@ export type ToggleConfig = {
  */
 export abstract class ToggleAction extends SingletonAction {
 	readonly #config: ToggleConfig;
+	readonly #lastImage = new Map<string, string>();
 
 	constructor(config: ToggleConfig) {
 		super();
@@ -41,6 +36,10 @@ export abstract class ToggleAction extends SingletonAction {
 		this.#render(ev.action, teams.snapshot);
 	}
 
+	override onWillDisappear(ev: WillDisappearEvent): void {
+		this.#lastImage.delete(ev.action.id);
+	}
+
 	override onKeyDown(): void {
 		if (teams.isActionable(this.#config.permission)) {
 			this.#config.command();
@@ -54,12 +53,13 @@ export abstract class ToggleAction extends SingletonAction {
 		if (!target.isKey()) {
 			return;
 		}
-		const { images } = this.#config;
 		// Render purely via setImage: setState alone cannot clear a previous setImage override.
-		if (!actionable(snapshot, this.#config.permission)) {
-			void target.setImage(images.disabled);
+		const image = selectImage(this.#config, snapshot);
+		if (this.#lastImage.get(target.id) === image) {
 			return;
 		}
-		void target.setImage(snapshot.state[this.#config.stateField] ? images.whenTrue : images.whenFalse);
+		this.#lastImage.set(target.id, image);
+		void target.setImage(image);
 	}
 }
+

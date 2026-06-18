@@ -1,6 +1,7 @@
 import { action } from "@elgato/streamdeck";
 
 import { teams } from "../teams/client";
+import { CAMERA } from "./toggle";
 import { ToggleAction } from "./toggle-action";
 
 /**
@@ -10,15 +11,7 @@ import { ToggleAction } from "./toggle-action";
 @action({ UUID: "io.github.teh-hippo.teamdeck.camera" })
 export class Camera extends ToggleAction {
 	constructor() {
-		super({
-			permission: "canToggleVideo",
-			stateField: "isVideoOn",
-			command: () => teams.toggleVideo(),
-			images: {
-				whenTrue: "imgs/actions/camera/on",
-				whenFalse: "imgs/actions/camera/off",
-				disabled: "imgs/actions/camera/disabled",
-			},
-		});
+		super({ ...CAMERA, command: () => teams.toggleVideo() });
 	}
 }
+

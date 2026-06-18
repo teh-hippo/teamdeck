@@ -1,6 +1,7 @@
 import { action } from "@elgato/streamdeck";
 
 import { teams } from "../teams/client";
+import { MUTE } from "./toggle";
 import { ToggleAction } from "./toggle-action";
 
 /**
@@ -10,16 +11,8 @@ import { ToggleAction } from "./toggle-action";
 @action({ UUID: "io.github.teh-hippo.teamdeck.mute" })
 export class Mute extends ToggleAction {
 	constructor() {
-		super({
-			permission: "canToggleMute",
-			stateField: "isMuted",
-			command: () => teams.toggleMute(),
-			images: {
-				whenTrue: "imgs/actions/mute/off",
-				whenFalse: "imgs/actions/mute/on",
-				disabled: "imgs/actions/mute/disabled",
-			},
-		});
+		super({ ...MUTE, command: () => teams.toggleMute() });
 	}
 }
+
 
