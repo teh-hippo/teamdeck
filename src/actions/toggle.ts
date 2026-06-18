@@ -13,12 +13,17 @@ export type ToggleSpec = {
 /** A toggle spec plus the command that performs it. */
 export type ToggleConfig = ToggleSpec & { command: () => void };
 
+/**
+ * Whether a key gated by the given permission can act, from a snapshot. Mirrors
+ * protocol.actionable; kept here so this module stays dependency-free and node-testable.
+ */
+export function isActionable(snapshot: TeamsSnapshot, permission: keyof MeetingPermissions): boolean {
+	return snapshot.connected && Boolean(snapshot.state.isInMeeting) && Boolean(snapshot.permissions[permission]);
+}
+
 /** Selects the key image for a toggle given the current snapshot. */
 export function selectImage(spec: ToggleSpec, snapshot: TeamsSnapshot): string {
-	// Mirrors protocol.actionable; inlined so this module stays dependency-free and node-testable.
-	const isActionable =
-		snapshot.connected && Boolean(snapshot.state.isInMeeting) && Boolean(snapshot.permissions[spec.permission]);
-	if (!isActionable) {
+	if (!isActionable(snapshot, spec.permission)) {
 		return spec.images.disabled;
 	}
 	return snapshot.state[spec.stateField] ? spec.images.whenTrue : spec.images.whenFalse;
