@@ -9,7 +9,7 @@
 // Run from the repo root. Most modes require a solo Teams "Meet now" meeting.
 //
 //   node tools/probe/probe.mjs observe [--seconds=60] [--unpaired]
-//   node tools/probe/probe.mjs pair [--hypothesis=h1|h2|h3|h4]
+//   node tools/probe/probe.mjs pair
 //   node tools/probe/probe.mjs send <action> [--type=<reaction>]
 //   node tools/probe/probe.mjs reactions
 //   node tools/probe/probe.mjs dead-token
@@ -135,10 +135,10 @@ function open(token) {
   return ws;
 }
 
-function sendCommand(ws, action, parameters = {}, raw = null) {
-  const payload = raw || { action, parameters, requestId: ++requestId };
+function sendCommand(ws, action, parameters = {}) {
+  const payload = { action, parameters, requestId: ++requestId };
   record("out", payload);
-  note("send", { action: raw ? raw.action : action, requestId: payload.requestId });
+  note("send", { action, requestId: payload.requestId });
   ws.send(JSON.stringify(payload));
   return payload.requestId;
 }
@@ -192,19 +192,15 @@ async function runObserve() {
 }
 
 async function runPair() {
-  const hypothesis = String(flags.hypothesis || "h1");
   const ws = open(null);
   await waitOpen(ws).catch((e) => note("open-failed", { error: e.message }));
   let attempted = false;
   const attempt = () => {
     if (attempted) return;
     attempted = true;
-    note("pair-attempt", { hypothesis });
+    note("pair-attempt");
     console.log("[probe] >>> Watch Teams now for an Allow / approve prompt <<<");
-    if (hypothesis === "h1") sendCommand(ws, "pair", {});
-    else if (hypothesis === "h2") sendCommand(ws, null, null, { apiVersion: "2.0.0", action: "pair", parameters: {}, requestId: ++requestId });
-    else if (hypothesis === "h3") sendCommand(ws, "send-reaction", { type: "like" });
-    else if (hypothesis === "h4") note("pair-h4-passive", { info: "sending nothing; waiting for auto tokenRefresh" });
+    sendCommand(ws, "pair", {});
   };
   ws.addEventListener("message", (e) => {
     const msg = (() => {
