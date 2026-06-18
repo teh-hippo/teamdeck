@@ -24,7 +24,7 @@ Stream Deck app ──launch──> bin/plugin.js (Node)
   present the same identity.
 - `src/teams/types.ts` — `MeetingState`, `MeetingPermissions`, `ReactionType`, `TeamsSnapshot`.
 - `src/teams/client.ts` — the singleton `teams` client: connect, pair, persist token in SD
-  global settings, reconnect with backoff, merge partial deltas, invalid-token re-pair, and
+  global settings, reconnect with backoff, merge snapshots, invalid-token re-pair, and
   broadcast snapshots. The only module that talks to the Teams socket.
 - `src/actions/*.ts` — one `SingletonAction` per action. They subscribe to `teams` and render.
 - `src/plugin.ts` — entry point: set log level (never `trace`), register actions, connect to
@@ -50,8 +50,8 @@ meeting, the greyed state is correct even if a stale state field lingers.
 
 ## Merge rules (from protocol.md)
 
-- `meetingState` is a full snapshot on connect, then partial single-field deltas: merge present
-  fields, never reset omitted ones.
+- Every observed `meetingState` message is a full snapshot; the merge is defensive so a
+  hypothetical partial would not reset omitted fields.
 - `meetingPermissions` can arrive alone: merge independently of state.
 - Background blur is not echoed: track it optimistically mid-session and trust the connect
   snapshot; reset on meeting transitions (Phase 2).

@@ -58,8 +58,9 @@ Shapes observed:
 `isMuted, isVideoOn, isHandRaised, isInMeeting, isRecordingOn, isBackgroundBlurred, isSharing,
 hasUnreadMessages` (all boolean).
 
-- On connect while paired and in a meeting, Teams sends a **full snapshot** (all 8 fields).
-- On change, Teams sends a **partial delta containing only the changed field(s)**.
+- Every observed `meetingUpdate` carries the **full** `meetingState` (all 8 fields) and full
+  `meetingPermissions` (all 10). The client merges defensively, so a hypothetical partial from
+  another Teams version would not reset omitted fields.
 - Out of a meeting, Teams sends **no meetingState** (only permissions). `isInMeeting` is the
   authoritative in/out-of-meeting signal.
 - **Blur is not echoed**: toggling background blur (from the Teams UI or via the API) returns
@@ -79,8 +80,8 @@ canToggleShareTray, canToggleChat, canStopSharing, canPair` (all boolean).
 
 ## Merge rules (for the client state machine)
 
-- Treat the first in-meeting message as a full snapshot; subsequent `meetingState` messages as
-  partial deltas — apply only the present fields onto cached state, never reset omitted fields.
+- Every `meetingState` message is a full snapshot; merge it onto cached state (the defensive
+  merge also tolerates a hypothetical partial without resetting omitted fields).
 - `meetingPermissions`-only message → update permissions only; do not touch meeting state.
 - `isInMeeting: false` → render all toggles as unavailable/greyed and reset optimistic blur.
 - `isInMeeting` false → true → reset optimistic blur to the snapshot value (or unknown).
