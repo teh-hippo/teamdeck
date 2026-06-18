@@ -26,10 +26,10 @@ Legend: [x] done · [~] in progress · [ ] pending
 
 ## Phase 2 — Reach original 10-action parity
 
-- [ ] p2-blur — background blur (optimistic, meeting-transition reset)
-- [ ] p2-leave — leave-call (gate canLeave; live only in Tier C)
-- [ ] p2-reactions — 5 reactions (send-reaction; wow = "Surprised"; gate canReact)
-- [ ] p2-tests — extend deterministic tests
+- [x] p2-blur — background blur toggle with optimistic state
+- [x] p2-leave — leave-call FireAction (gate canLeave; live test in Tier C)
+- [x] p2-reactions — 5 reactions (send-reaction; wow = "Surprised"; gate canReact)
+- [x] p2-tests — selectImage covers Blur; isActionable gate test (16 tests total)
 - [ ] p2-gate — expert + human review
 
 ## Phase 3 — Faithful UX, packaging, OSS release
