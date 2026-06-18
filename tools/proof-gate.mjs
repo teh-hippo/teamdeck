@@ -9,6 +9,7 @@ const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url),
 const steps = [
 	["build", "npm run build"],
 	["validate", "npm run validate"],
+	["check-icons", "npm run check-icons"],
 ];
 if (pkg.scripts?.test) {
 	steps.push(["test", "npm test"]);
