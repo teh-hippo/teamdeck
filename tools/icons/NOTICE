@@ -23,6 +23,10 @@ Vendored glyph mapping:
 - hand_multiple_24_filled.svg <- hand_multiple_24_filled, used for applause because @fluentui/svg-icons 1.1.330 does not include an applause or clap glyph
 - emoji_laugh_24_filled.svg <- emoji_laugh_24_filled
 - emoji_surprise_24_filled.svg <- emoji_surprise_24_filled
+- record_24_filled.svg <- record_24_filled, used for the Recording status tile
+- share_screen_start_24_filled.svg <- share_screen_start_24_filled, used for the Screen Sharing status tile
+- chat_24_filled.svg <- chat_24_filled, used for the Unread Messages status tile
+- people_24_filled.svg <- people_24_filled, used for the In Meeting status tile
 
 MIT License
 
