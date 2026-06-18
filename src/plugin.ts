@@ -7,6 +7,7 @@ import { Leave } from "./actions/leave";
 import { Mute } from "./actions/mute";
 import { Applause, Laugh, Like, Love, Surprised } from "./actions/reactions";
 import { teams } from "./teams/client";
+import { registerPropertyInspector } from "./ui";
 
 // Avoid trace logging: it records all messages between Stream Deck and the plugin, which would
 // include the pairing token held in global settings.
@@ -27,5 +28,8 @@ streamDeck.actions.registerAction(new Surprised());
 // never blocked by the external WebSocket.
 streamDeck
 	.connect()
-	.then(() => teams.start())
+	.then(() => {
+		registerPropertyInspector();
+		return teams.start();
+	})
 	.catch((error) => streamDeck.logger.error(`Startup failed: ${error}`));

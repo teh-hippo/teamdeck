@@ -73,6 +73,11 @@ class TeamsClient {
 		}
 	}
 
+	/** Forgets the stored token and re-pairs. Used by the property inspector's re-pair button. */
+	repair(): void {
+		this.#dropTokenAndRepair();
+	}
+
 	/** Whether a command gated by the given permission can be sent right now. */
 	isActionable(permission: keyof MeetingPermissions): boolean {
 		return actionable(this.snapshot, permission);
