@@ -30,7 +30,9 @@ type ServerMessage = {
  */
 class TeamsClient {
 	#ws?: WebSocket;
+	#abort?: AbortController;
 	#token?: string;
+	#pairing = false;
 	#requestId = 0;
 	#reconnectDelay = 1_000;
 	#reconnectTimer?: ReturnType<typeof setTimeout>;
@@ -69,8 +71,13 @@ class TeamsClient {
 	}
 
 	/** Whether a command gated by the given permission can be sent right now. */
+	/** Forces a fresh connection, e.g. to recover a stale socket from a key press. */
+	reconnect(): void {
+		this.#connect();
+	}
+
 	isActionable(permission: keyof MeetingPermissions): boolean {
-		return Boolean(this.#state.isInMeeting) && Boolean(this.#permissions[permission]);
+		return this.#connected && Boolean(this.#state.isInMeeting) && Boolean(this.#permissions[permission]);
 	}
 
 	toggleMute(): void {
@@ -113,27 +120,59 @@ class TeamsClient {
 
 	#connect(): void {
 		clearTimeout(this.#reconnectTimer);
+		// Tear down any previous socket and its listeners so two never run at once; the protocol
+		// notes warn that concurrent same-identity sockets can revoke the token.
+		this.#abort?.abort();
+		try {
+			this.#ws?.close();
+		} catch {
+			// ignore
+		}
+		this.#pairing = false;
+
 		const paired = Boolean(this.#token);
+		const abort = new AbortController();
+		this.#abort = abort;
 		const ws = new WebSocket(this.#url());
 		this.#ws = ws;
 
-		ws.addEventListener("open", () => {
-			this.#connected = true;
-			this.#reconnectDelay = 1_000;
-			streamDeck.logger.info(`Teams connected (paired: ${paired}).`);
-			this.#emit();
-		});
-		ws.addEventListener("message", (ev) => {
-			this.#onMessage(typeof ev.data === "string" ? ev.data : String(ev.data));
-		});
-		ws.addEventListener("close", () => {
-			this.#connected = false;
-			this.#emit();
-			this.#scheduleReconnect();
-		});
-		ws.addEventListener("error", () => {
-			// A `close` event always follows; reconnection is handled there.
-		});
+		ws.addEventListener(
+			"open",
+			() => {
+				this.#connected = true;
+				this.#reconnectDelay = 1_000;
+				streamDeck.logger.info(`Teams connected (paired: ${paired}).`);
+				this.#emit();
+			},
+			{ signal: abort.signal },
+		);
+		ws.addEventListener(
+			"message",
+			(ev) => this.#onMessage(typeof ev.data === "string" ? ev.data : String(ev.data)),
+			{ signal: abort.signal },
+		);
+		ws.addEventListener(
+			"close",
+			() => {
+				this.#connected = false;
+				this.#state = {};
+				this.#permissions = {};
+				this.#emit();
+				streamDeck.logger.info("Teams connection closed; reconnecting.");
+				this.#scheduleReconnect();
+			},
+			{ signal: abort.signal },
+		);
+		ws.addEventListener(
+			"error",
+			() => {
+				// Some failures (e.g. connection refused) emit only `error`; ensure a retry.
+				if (!this.#connected) {
+					this.#scheduleReconnect();
+				}
+			},
+			{ signal: abort.signal },
+		);
 	}
 
 	#scheduleReconnect(): void {
@@ -171,12 +210,13 @@ class TeamsClient {
 
 		const canPair = update.meetingPermissions?.canPair;
 		if (this.#token && canPair === true) {
-			// Holding a token yet Teams offers to pair: the token is invalid. Re-pair.
 			streamDeck.logger.warn("Teams token rejected; re-pairing.");
 			this.#dropTokenAndRepair();
 			return;
 		}
-		if (!this.#token && canPair === true) {
+		if (!this.#token && canPair === true && !this.#pairing) {
+			this.#pairing = true;
+			streamDeck.logger.info("Requesting Teams pairing; approve the prompt in Teams.");
 			this.#send("pair");
 		}
 
@@ -186,26 +226,19 @@ class TeamsClient {
 	#onToken(token: string): void {
 		const firstPairing = !this.#token;
 		this.#token = token;
+		this.#pairing = false;
 		void streamDeck.settings.setGlobalSettings<GlobalSettings>({ teamsToken: token });
 		streamDeck.logger.info("Teams pairing token stored.");
 		if (firstPairing) {
 			// Reconnect with the token to obtain an authorised session (verified flow).
-			this.#closeSocket();
+			this.#connect();
 		}
 	}
 
 	#dropTokenAndRepair(): void {
 		this.#token = undefined;
 		void streamDeck.settings.setGlobalSettings<GlobalSettings>({});
-		this.#closeSocket();
-	}
-
-	#closeSocket(): void {
-		try {
-			this.#ws?.close();
-		} catch {
-			// Ignore; the close handler drives reconnection.
-		}
+		this.#connect();
 	}
 
 	#send(action: string, parameters: Record<string, unknown> = {}): void {
