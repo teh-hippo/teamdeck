@@ -58,12 +58,19 @@ class TeamsClient {
 		this.#connect();
 	}
 
-	/** Forces a fresh connection, e.g. to recover a stale socket or re-trigger pairing. */
+	/** Forces a fresh connection, e.g. for a manual re-pair from the property inspector. */
 	reconnect(): void {
 		if (this.#ws?.readyState === WebSocket.CONNECTING) {
 			return;
 		}
 		this.#connect();
+	}
+
+	/** Recovers a stuck connection or re-triggers a missed pairing prompt; no-op when healthy. */
+	recover(): void {
+		if (!this.#connected || (!this.#token && this.#permissions.canPair === true)) {
+			this.#connect();
+		}
 	}
 
 	/** Whether a command gated by the given permission can be sent right now. */

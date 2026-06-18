@@ -28,7 +28,8 @@ export abstract class ToggleAction extends SingletonAction {
 	constructor(config: ToggleConfig) {
 		super();
 		this.#config = config;
-		// A single subscription drives every visible instance of this action.
+		// Re-render every visible instance whenever Teams state changes. The initial render is
+		// handled by onWillAppear; no instances are visible yet at construction.
 		teams.subscribe((snapshot) => {
 			for (const visible of this.actions) {
 				this.#render(visible, snapshot);
@@ -44,9 +45,8 @@ export abstract class ToggleAction extends SingletonAction {
 		if (teams.isActionable(this.#config.permission)) {
 			this.#config.command();
 		} else {
-			// Not actionable (stale socket, or a missed pairing prompt): poke a reconnect, which
-			// re-triggers pairing while in a meeting.
-			teams.reconnect();
+			// Not actionable: recover a stuck socket or a missed pairing prompt (no-op if healthy).
+			teams.recover();
 		}
 	}
 

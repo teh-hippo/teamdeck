@@ -59,24 +59,26 @@ test("actionable requires connected, in a meeting, and the permission", () => {
 });
 
 test("fixture replay reproduces the captured state and permissions", () => {
-	const fixture = readdirSync(progressDir)
+	const fixtures = readdirSync(progressDir)
 		.filter((f) => f.startsWith("probe-observe-") && f.endsWith(".json"))
 		.map((f) => JSON.parse(readFileSync(join(progressDir, f), "utf8")))
-		.find((d) => d.messages.some((m) => m.payload?.meetingUpdate?.meetingState));
-	assert.ok(fixture, "a captured fixture with meetingState exists");
+		.filter((d) => d.messages.some((m) => m.payload?.meetingUpdate?.meetingState));
+	assert.ok(fixtures.length > 0, "at least one captured fixture with meetingState exists");
 
-	let state = {};
-	let permissions = {};
-	for (const m of fixture.messages) {
-		const update = m.payload?.meetingUpdate;
-		if (!update) {
-			continue;
+	for (const fixture of fixtures) {
+		let state = {};
+		let permissions = {};
+		for (const m of fixture.messages) {
+			const update = m.payload?.meetingUpdate;
+			if (!update) {
+				continue;
+			}
+			state = mergeState(state, update.meetingState);
+			permissions = mergePermissions(permissions, update.meetingPermissions);
 		}
-		state = mergeState(state, update.meetingState);
-		permissions = mergePermissions(permissions, update.meetingPermissions);
+		assert.deepEqual(state, fixture.seen.stateFields);
+		assert.deepEqual(permissions, fixture.seen.permissionFields);
 	}
-	assert.deepEqual(state, fixture.seen.stateFields);
-	assert.deepEqual(permissions, fixture.seen.permissionFields);
 });
 
 test("buildUrl url-encodes identity values", () => {
