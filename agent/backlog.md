@@ -13,15 +13,15 @@ Legend: [x] done · [~] in progress · [ ] pending
 - [x] p0a-protocol-probe — standalone probe; protocol captured in agent/specs/protocol.md
 - [x] p0b-scaffold-manifest — scaffold; manifest SDKVersion 3 / Node 24 / min 7.1; validates
 - [x] p0b-ws-client — shared Teams WebSocket singleton (src/teams/client.ts)
-- [~] p0b-mute-e2e — runtime connect proven (log: Teams connected); visual on-Neo test pending user
-- [~] p0c-ralph-harness — this spec, proof gate, secret scan, backlog seed
-- [ ] p0-gate — expert + human review
+- [x] p0b-mute-e2e — verified live on the Neo: red/green and toggles Teams mute
+- [x] p0c-ralph-harness — loop spec, proof gate, secret scan, backlog seed
+- [x] p0-gate — expert panel reviewed and findings addressed; human E2E confirmed
 
 ## Phase 1 — Core actions (Mute, Camera, Raise Hand)
 
-- [ ] p1-base-action — base action + key state machine + replay-on-appear
-- [ ] p1-mute-camera-hand — three echoed live-state toggles + greyed not-in-meeting
-- [ ] p1-deterministic-tests — mock Teams server + fixture replay + negative paths
+- [x] p1-base-action — ToggleAction base; setImage-driven live state; replay-on-appear
+- [x] p1-mute-camera-hand — Mute, Camera, Raise Hand echoed live-state toggles
+- [x] p1-deterministic-tests — protocol unit + fixture-replay suite (10 tests) in the Tier A gate
 - [ ] p1-gate — expert + human review
 
 ## Phase 2 — Reach original 10-action parity
