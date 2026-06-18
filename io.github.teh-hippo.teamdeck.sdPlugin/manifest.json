@@ -255,8 +255,7 @@
 		}
 	],
 	"Nodejs": {
-		"Version": "24",
-		"Debug": "enabled"
+		"Version": "24"
 	},
 	"UUID": "io.github.teh-hippo.teamdeck"
 }
