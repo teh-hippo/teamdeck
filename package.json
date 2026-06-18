@@ -14,7 +14,11 @@
 		"watch": "rollup -c -w --watch.onEnd=\"streamdeck restart io.github.teh-hippo.teamdeck\"",
 		"icons": "node tools/gen-icons.mjs",
 		"validate": "streamdeck validate io.github.teh-hippo.teamdeck.sdPlugin",
-		"pack": "streamdeck pack io.github.teh-hippo.teamdeck.sdPlugin"
+		"pack": "streamdeck pack io.github.teh-hippo.teamdeck.sdPlugin",
+		"proof": "node tools/proof-gate.mjs",
+		"secret-scan": "node tools/secret-scan.mjs",
+		"hooks": "node tools/install-hooks.mjs",
+		"prepare": "node tools/install-hooks.mjs"
 	},
 	"devDependencies": {
 		"@elgato/cli": "^1.7.4",
