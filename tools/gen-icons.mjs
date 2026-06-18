@@ -17,6 +17,8 @@ const COLORS = {
   neutral: "#B0B3FF", // action list icon
   on: "#2EA043", // active / unmuted / camera-on
   off: "#D13438", // muted / camera-off
+  raised: "#E3A008", // hand raised
+  lowered: "#5A6B7B", // hand lowered
   disabled: "#5A5A5A", // not in a meeting
 };
 
@@ -93,6 +95,14 @@ const ICONS = [
   ["imgs/actions/mute/on", 72, 144, "on"],
   ["imgs/actions/mute/off", 72, 144, "off"],
   ["imgs/actions/mute/disabled", 72, 144, "disabled"],
+  ["imgs/actions/camera/icon", 20, 40, "neutral"],
+  ["imgs/actions/camera/on", 72, 144, "on"],
+  ["imgs/actions/camera/off", 72, 144, "off"],
+  ["imgs/actions/camera/disabled", 72, 144, "disabled"],
+  ["imgs/actions/hand/icon", 20, 40, "neutral"],
+  ["imgs/actions/hand/raised", 72, 144, "raised"],
+  ["imgs/actions/hand/lowered", 72, 144, "lowered"],
+  ["imgs/actions/hand/disabled", 72, 144, "disabled"],
 ];
 
 for (const [rel, base, retina, colorKey] of ICONS) {
