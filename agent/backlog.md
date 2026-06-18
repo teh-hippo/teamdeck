@@ -30,14 +30,14 @@ Legend: [x] done · [~] in progress · [ ] pending
 - [x] p2-leave — leave-call FireAction (gate canLeave; live test in Tier C)
 - [x] p2-reactions — 5 reactions (send-reaction; wow = "Surprised"; gate canReact)
 - [x] p2-tests — selectImage covers Blur; isActionable gate test (16 tests total)
-- [ ] p2-gate — expert + human review
+- [x] p2-gate — both Opus reviewers (no blockers); findings addressed (18 tests)
 
 ## Phase 3 — Faithful UX, packaging, OSS release
 
-- [ ] p3-branding — finalise name/UUID/disclaimer + icon provenance
-- [ ] p3-property-inspector — single root PI (pairing status, re-pair, host/token override)
-- [ ] p3-neo-profile — 2-page Neo profile (10 actions over 8 keys)
-- [ ] p3-package-release — pack .streamDeckPlugin + README + LICENSE
+- [x] p3-branding — name/UUID/disclaimer set; trademark checked; placeholder icons (final art deferred)
+- [ ] p3-property-inspector — root PI (pairing status, re-pair) [pending direction]
+- [ ] p3-neo-profile — 2-page Neo profile (10 actions over 8 keys) [pending direction]
+- [~] p3-package-release — README + LICENSE + pack verified; final icons/profile + publish pending
 - [ ] p3-gate — expert + human review
 
 ## Phase 4 — Optional stretch (beyond original), isolated
