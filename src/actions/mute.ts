@@ -3,7 +3,11 @@ import { action, type DialAction, type KeyAction, SingletonAction, type WillAppe
 import { teams } from "../teams/client";
 import type { TeamsSnapshot } from "../teams/types";
 
-const DISABLED_IMAGE = "imgs/actions/mute/disabled";
+const IMAGE = {
+	live: "imgs/actions/mute/on",
+	muted: "imgs/actions/mute/off",
+	disabled: "imgs/actions/mute/disabled",
+};
 
 /**
  * Toggles the Microsoft Teams microphone and mirrors live mute state on the key.
@@ -30,6 +34,9 @@ export class Mute extends SingletonAction {
 	override onKeyDown(): void {
 		if (teams.isActionable("canToggleMute")) {
 			teams.toggleMute();
+		} else if (!teams.snapshot.connected) {
+			// Recover a possibly-stale socket on press.
+			teams.reconnect();
 		}
 	}
 
@@ -37,11 +44,10 @@ export class Mute extends SingletonAction {
 		if (!target.isKey()) {
 			return;
 		}
-		const actionable = Boolean(snapshot.state.isInMeeting) && Boolean(snapshot.permissions.canToggleMute);
-		if (!actionable) {
-			void target.setImage(DISABLED_IMAGE);
-			return;
-		}
-		void target.setState(snapshot.state.isMuted ? 1 : 0);
+		const actionable =
+			snapshot.connected && Boolean(snapshot.state.isInMeeting) && Boolean(snapshot.permissions.canToggleMute);
+		// Render purely via setImage: setState alone cannot clear a previous setImage override.
+		const image = !actionable ? IMAGE.disabled : snapshot.state.isMuted ? IMAGE.muted : IMAGE.live;
+		void target.setImage(image);
 	}
 }
