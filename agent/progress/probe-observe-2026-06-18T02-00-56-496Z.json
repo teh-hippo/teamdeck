@@ -1,0 +1,501 @@
+{
+  "mode": "observe",
+  "startedAt": "2026-06-18T02:00:56.496Z",
+  "identity": {
+    "manufacturer": "TeamDeck",
+    "device": "Stream Deck",
+    "app": "TeamDeck",
+    "appVersion": "0.1.0"
+  },
+  "messages": [
+    {
+      "t": "2026-06-18T02:00:56.555Z",
+      "direction": "in",
+      "payload": {
+        "requestId": 0,
+        "response": "Success"
+      }
+    },
+    {
+      "t": "2026-06-18T02:00:56.557Z",
+      "direction": "in",
+      "payload": {
+        "meetingUpdate": {
+          "meetingState": {
+            "isMuted": false,
+            "isRecordingOn": false,
+            "isVideoOn": false,
+            "hasUnreadMessages": false,
+            "isHandRaised": false,
+            "isSharing": false,
+            "isInMeeting": true,
+            "isBackgroundBlurred": false
+          },
+          "meetingPermissions": {
+            "canReact": true,
+            "canToggleVideo": true,
+            "canToggleMute": true,
+            "canToggleHand": true,
+            "canToggleShareTray": true,
+            "canLeave": true,
+            "canToggleBlur": false,
+            "canToggleChat": true,
+            "canStopSharing": false,
+            "canPair": false
+          }
+        }
+      }
+    },
+    {
+      "t": "2026-06-18T02:01:45.826Z",
+      "direction": "in",
+      "payload": {
+        "meetingUpdate": {
+          "meetingState": {
+            "isMuted": false,
+            "isRecordingOn": false,
+            "isVideoOn": true,
+            "hasUnreadMessages": false,
+            "isHandRaised": false,
+            "isSharing": false,
+            "isInMeeting": true,
+            "isBackgroundBlurred": false
+          },
+          "meetingPermissions": {
+            "canReact": true,
+            "canToggleVideo": true,
+            "canToggleMute": true,
+            "canToggleHand": true,
+            "canToggleShareTray": true,
+            "canLeave": true,
+            "canToggleBlur": true,
+            "canToggleChat": true,
+            "canStopSharing": false,
+            "canPair": false
+          }
+        }
+      }
+    },
+    {
+      "t": "2026-06-18T02:01:48.410Z",
+      "direction": "in",
+      "payload": {
+        "meetingUpdate": {
+          "meetingState": {
+            "isMuted": false,
+            "isRecordingOn": false,
+            "isVideoOn": false,
+            "hasUnreadMessages": false,
+            "isHandRaised": false,
+            "isSharing": false,
+            "isInMeeting": true,
+            "isBackgroundBlurred": false
+          },
+          "meetingPermissions": {
+            "canReact": true,
+            "canToggleVideo": true,
+            "canToggleMute": true,
+            "canToggleHand": true,
+            "canToggleShareTray": true,
+            "canLeave": true,
+            "canToggleBlur": false,
+            "canToggleChat": true,
+            "canStopSharing": false,
+            "canPair": false
+          }
+        }
+      }
+    },
+    {
+      "t": "2026-06-18T02:01:51.502Z",
+      "direction": "in",
+      "payload": {
+        "meetingUpdate": {
+          "meetingState": {
+            "isMuted": true,
+            "isRecordingOn": false,
+            "isVideoOn": false,
+            "hasUnreadMessages": false,
+            "isHandRaised": false,
+            "isSharing": false,
+            "isInMeeting": true,
+            "isBackgroundBlurred": false
+          },
+          "meetingPermissions": {
+            "canReact": true,
+            "canToggleVideo": true,
+            "canToggleMute": true,
+            "canToggleHand": true,
+            "canToggleShareTray": true,
+            "canLeave": true,
+            "canToggleBlur": false,
+            "canToggleChat": true,
+            "canStopSharing": false,
+            "canPair": false
+          }
+        }
+      }
+    },
+    {
+      "t": "2026-06-18T02:01:52.996Z",
+      "direction": "in",
+      "payload": {
+        "meetingUpdate": {
+          "meetingState": {
+            "isMuted": false,
+            "isRecordingOn": false,
+            "isVideoOn": false,
+            "hasUnreadMessages": false,
+            "isHandRaised": false,
+            "isSharing": false,
+            "isInMeeting": true,
+            "isBackgroundBlurred": false
+          },
+          "meetingPermissions": {
+            "canReact": true,
+            "canToggleVideo": true,
+            "canToggleMute": true,
+            "canToggleHand": true,
+            "canToggleShareTray": true,
+            "canLeave": true,
+            "canToggleBlur": false,
+            "canToggleChat": true,
+            "canStopSharing": false,
+            "canPair": false
+          }
+        }
+      }
+    },
+    {
+      "t": "2026-06-18T02:01:55.330Z",
+      "direction": "in",
+      "payload": {
+        "meetingUpdate": {
+          "meetingState": {
+            "isMuted": true,
+            "isRecordingOn": false,
+            "isVideoOn": false,
+            "hasUnreadMessages": false,
+            "isHandRaised": false,
+            "isSharing": false,
+            "isInMeeting": true,
+            "isBackgroundBlurred": false
+          },
+          "meetingPermissions": {
+            "canReact": true,
+            "canToggleVideo": true,
+            "canToggleMute": true,
+            "canToggleHand": true,
+            "canToggleShareTray": true,
+            "canLeave": true,
+            "canToggleBlur": false,
+            "canToggleChat": true,
+            "canStopSharing": false,
+            "canPair": false
+          }
+        }
+      }
+    },
+    {
+      "t": "2026-06-18T02:01:57.570Z",
+      "direction": "in",
+      "payload": {
+        "meetingUpdate": {
+          "meetingState": {
+            "isMuted": false,
+            "isRecordingOn": false,
+            "isVideoOn": false,
+            "hasUnreadMessages": false,
+            "isHandRaised": false,
+            "isSharing": false,
+            "isInMeeting": true,
+            "isBackgroundBlurred": false
+          },
+          "meetingPermissions": {
+            "canReact": true,
+            "canToggleVideo": true,
+            "canToggleMute": true,
+            "canToggleHand": true,
+            "canToggleShareTray": true,
+            "canLeave": true,
+            "canToggleBlur": false,
+            "canToggleChat": true,
+            "canStopSharing": false,
+            "canPair": false
+          }
+        }
+      }
+    },
+    {
+      "t": "2026-06-18T02:01:59.512Z",
+      "direction": "in",
+      "payload": {
+        "meetingUpdate": {
+          "meetingState": {
+            "isMuted": false,
+            "isRecordingOn": false,
+            "isVideoOn": false,
+            "hasUnreadMessages": false,
+            "isHandRaised": false,
+            "isSharing": false,
+            "isInMeeting": true,
+            "isBackgroundBlurred": false
+          },
+          "meetingPermissions": {
+            "canReact": true,
+            "canToggleVideo": true,
+            "canToggleMute": true,
+            "canToggleHand": true,
+            "canToggleShareTray": true,
+            "canLeave": true,
+            "canToggleBlur": false,
+            "canToggleChat": true,
+            "canStopSharing": false,
+            "canPair": false
+          }
+        }
+      }
+    },
+    {
+      "t": "2026-06-18T02:02:01.347Z",
+      "direction": "in",
+      "payload": {
+        "meetingUpdate": {
+          "meetingState": {
+            "isMuted": false,
+            "isRecordingOn": false,
+            "isVideoOn": false,
+            "hasUnreadMessages": false,
+            "isHandRaised": true,
+            "isSharing": false,
+            "isInMeeting": true,
+            "isBackgroundBlurred": false
+          },
+          "meetingPermissions": {
+            "canReact": true,
+            "canToggleVideo": true,
+            "canToggleMute": true,
+            "canToggleHand": true,
+            "canToggleShareTray": true,
+            "canLeave": true,
+            "canToggleBlur": false,
+            "canToggleChat": true,
+            "canStopSharing": false,
+            "canPair": false
+          }
+        }
+      }
+    },
+    {
+      "t": "2026-06-18T02:02:02.121Z",
+      "direction": "in",
+      "payload": {
+        "meetingUpdate": {
+          "meetingState": {
+            "isMuted": false,
+            "isRecordingOn": false,
+            "isVideoOn": false,
+            "hasUnreadMessages": false,
+            "isHandRaised": true,
+            "isSharing": false,
+            "isInMeeting": true,
+            "isBackgroundBlurred": false
+          },
+          "meetingPermissions": {
+            "canReact": true,
+            "canToggleVideo": true,
+            "canToggleMute": true,
+            "canToggleHand": true,
+            "canToggleShareTray": true,
+            "canLeave": true,
+            "canToggleBlur": false,
+            "canToggleChat": true,
+            "canStopSharing": false,
+            "canPair": false
+          }
+        }
+      }
+    },
+    {
+      "t": "2026-06-18T02:02:03.848Z",
+      "direction": "in",
+      "payload": {
+        "meetingUpdate": {
+          "meetingState": {
+            "isMuted": false,
+            "isRecordingOn": false,
+            "isVideoOn": false,
+            "hasUnreadMessages": false,
+            "isHandRaised": false,
+            "isSharing": false,
+            "isInMeeting": true,
+            "isBackgroundBlurred": false
+          },
+          "meetingPermissions": {
+            "canReact": true,
+            "canToggleVideo": true,
+            "canToggleMute": true,
+            "canToggleHand": true,
+            "canToggleShareTray": true,
+            "canLeave": true,
+            "canToggleBlur": false,
+            "canToggleChat": true,
+            "canStopSharing": false,
+            "canPair": false
+          }
+        }
+      }
+    },
+    {
+      "t": "2026-06-18T02:02:04.145Z",
+      "direction": "in",
+      "payload": {
+        "meetingUpdate": {
+          "meetingState": {
+            "isMuted": false,
+            "isRecordingOn": false,
+            "isVideoOn": true,
+            "hasUnreadMessages": false,
+            "isHandRaised": false,
+            "isSharing": false,
+            "isInMeeting": true,
+            "isBackgroundBlurred": false
+          },
+          "meetingPermissions": {
+            "canReact": true,
+            "canToggleVideo": true,
+            "canToggleMute": true,
+            "canToggleHand": true,
+            "canToggleShareTray": true,
+            "canLeave": true,
+            "canToggleBlur": true,
+            "canToggleChat": true,
+            "canStopSharing": false,
+            "canPair": false
+          }
+        }
+      }
+    }
+  ],
+  "events": [
+    {
+      "t": "2026-06-18T02:00:56.499Z",
+      "event": "connecting",
+      "urlWithoutToken": "ws://127.0.0.1:8124?protocol-version=2.0.0&manufacturer=TeamDeck&device=Stream+Deck&app=TeamDeck&app-version=0.1.0",
+      "tokenPresent": true
+    },
+    {
+      "t": "2026-06-18T02:00:56.554Z",
+      "event": "open"
+    },
+    {
+      "t": "2026-06-18T02:00:56.555Z",
+      "event": "response",
+      "response": "Success",
+      "requestId": 0
+    },
+    {
+      "t": "2026-06-18T02:00:56.557Z",
+      "event": "state-change",
+      "changed": [
+        "isMuted=false",
+        "isRecordingOn=false",
+        "isVideoOn=false",
+        "hasUnreadMessages=false",
+        "isHandRaised=false",
+        "isSharing=false",
+        "isInMeeting=true",
+        "isBackgroundBlurred=false"
+      ]
+    },
+    {
+      "t": "2026-06-18T02:01:45.826Z",
+      "event": "state-change",
+      "changed": [
+        "isVideoOn=true"
+      ]
+    },
+    {
+      "t": "2026-06-18T02:01:48.410Z",
+      "event": "state-change",
+      "changed": [
+        "isVideoOn=false"
+      ]
+    },
+    {
+      "t": "2026-06-18T02:01:51.502Z",
+      "event": "state-change",
+      "changed": [
+        "isMuted=true"
+      ]
+    },
+    {
+      "t": "2026-06-18T02:01:52.996Z",
+      "event": "state-change",
+      "changed": [
+        "isMuted=false"
+      ]
+    },
+    {
+      "t": "2026-06-18T02:01:55.330Z",
+      "event": "state-change",
+      "changed": [
+        "isMuted=true"
+      ]
+    },
+    {
+      "t": "2026-06-18T02:01:57.570Z",
+      "event": "state-change",
+      "changed": [
+        "isMuted=false"
+      ]
+    },
+    {
+      "t": "2026-06-18T02:02:01.347Z",
+      "event": "state-change",
+      "changed": [
+        "isHandRaised=true"
+      ]
+    },
+    {
+      "t": "2026-06-18T02:02:03.848Z",
+      "event": "state-change",
+      "changed": [
+        "isHandRaised=false"
+      ]
+    },
+    {
+      "t": "2026-06-18T02:02:04.145Z",
+      "event": "state-change",
+      "changed": [
+        "isVideoOn=true"
+      ]
+    }
+  ],
+  "seen": {
+    "stateFields": {
+      "isMuted": false,
+      "isRecordingOn": false,
+      "isVideoOn": true,
+      "hasUnreadMessages": false,
+      "isHandRaised": false,
+      "isSharing": false,
+      "isInMeeting": true,
+      "isBackgroundBlurred": false
+    },
+    "permissionFields": {
+      "canReact": true,
+      "canToggleVideo": true,
+      "canToggleMute": true,
+      "canToggleHand": true,
+      "canToggleShareTray": true,
+      "canLeave": true,
+      "canToggleBlur": true,
+      "canToggleChat": true,
+      "canStopSharing": false,
+      "canPair": false
+    },
+    "reactions": {}
+  },
+  "endedAt": "2026-06-18T02:02:06.568Z"
+}

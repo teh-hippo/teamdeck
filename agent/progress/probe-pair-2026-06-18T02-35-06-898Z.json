@@ -1,0 +1,126 @@
+{
+  "mode": "pair",
+  "startedAt": "2026-06-18T02:35:06.898Z",
+  "identity": {
+    "manufacturer": "TeamDeck",
+    "device": "Stream Deck",
+    "app": "TeamDeck",
+    "appVersion": "0.1.0"
+  },
+  "messages": [
+    {
+      "t": "2026-06-18T02:35:06.954Z",
+      "direction": "in",
+      "payload": {
+        "requestId": 0,
+        "response": "Success"
+      }
+    },
+    {
+      "t": "2026-06-18T02:35:06.954Z",
+      "direction": "in",
+      "payload": {
+        "meetingUpdate": {
+          "meetingPermissions": {
+            "canReact": true,
+            "canToggleVideo": true,
+            "canToggleMute": true,
+            "canToggleHand": true,
+            "canToggleShareTray": true,
+            "canLeave": true,
+            "canToggleBlur": true,
+            "canToggleChat": true,
+            "canStopSharing": false,
+            "canPair": true
+          }
+        }
+      }
+    },
+    {
+      "t": "2026-06-18T02:35:06.954Z",
+      "direction": "out",
+      "payload": {
+        "action": "pair",
+        "parameters": {},
+        "requestId": 1
+      }
+    },
+    {
+      "t": "2026-06-18T02:35:08.320Z",
+      "direction": "in",
+      "payload": {
+        "tokenRefresh": "<redacted:36>"
+      }
+    },
+    {
+      "t": "2026-06-18T02:35:08.322Z",
+      "direction": "in",
+      "payload": {
+        "requestId": 1,
+        "response": "Success"
+      }
+    }
+  ],
+  "events": [
+    {
+      "t": "2026-06-18T02:35:06.899Z",
+      "event": "connecting",
+      "urlWithoutToken": "ws://127.0.0.1:8124?protocol-version=2.0.0&manufacturer=TeamDeck&device=Stream+Deck&app=TeamDeck&app-version=0.1.0",
+      "tokenPresent": false
+    },
+    {
+      "t": "2026-06-18T02:35:06.953Z",
+      "event": "open"
+    },
+    {
+      "t": "2026-06-18T02:35:06.954Z",
+      "event": "response",
+      "response": "Success",
+      "requestId": 0
+    },
+    {
+      "t": "2026-06-18T02:35:06.954Z",
+      "event": "pair-attempt",
+      "hypothesis": "h1"
+    },
+    {
+      "t": "2026-06-18T02:35:06.954Z",
+      "event": "send",
+      "action": "pair",
+      "requestId": 1
+    },
+    {
+      "t": "2026-06-18T02:35:08.320Z",
+      "event": "token-refresh-received",
+      "length": 36
+    },
+    {
+      "t": "2026-06-18T02:35:08.321Z",
+      "event": "paired",
+      "hint": "token saved to agent/progress/probe-token.json (gitignored)"
+    },
+    {
+      "t": "2026-06-18T02:35:08.322Z",
+      "event": "response",
+      "response": "Success",
+      "requestId": 1
+    }
+  ],
+  "seen": {
+    "stateFields": {},
+    "permissionFields": {
+      "canReact": true,
+      "canToggleVideo": true,
+      "canToggleMute": true,
+      "canToggleHand": true,
+      "canToggleShareTray": true,
+      "canLeave": true,
+      "canToggleBlur": true,
+      "canToggleChat": true,
+      "canStopSharing": false,
+      "canPair": true
+    },
+    "reactions": {}
+  },
+  "endedAt": "2026-06-18T02:35:08.836Z"
+}

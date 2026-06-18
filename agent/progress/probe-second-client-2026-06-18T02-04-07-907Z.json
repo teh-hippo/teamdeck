@@ -1,0 +1,144 @@
+{
+  "mode": "second-client",
+  "startedAt": "2026-06-18T02:04:07.907Z",
+  "identity": {
+    "manufacturer": "TeamDeck",
+    "device": "Stream Deck",
+    "app": "TeamDeck",
+    "appVersion": "0.1.0"
+  },
+  "messages": [
+    {
+      "t": "2026-06-18T02:04:07.969Z",
+      "direction": "in",
+      "payload": {
+        "requestId": 0,
+        "response": "Success"
+      }
+    },
+    {
+      "t": "2026-06-18T02:04:07.969Z",
+      "direction": "in",
+      "payload": {
+        "meetingUpdate": {
+          "meetingPermissions": {
+            "canReact": true,
+            "canToggleVideo": true,
+            "canToggleMute": true,
+            "canToggleHand": true,
+            "canToggleShareTray": true,
+            "canLeave": true,
+            "canToggleBlur": true,
+            "canToggleChat": true,
+            "canStopSharing": false,
+            "canPair": true
+          }
+        }
+      }
+    },
+    {
+      "t": "2026-06-18T02:04:07.973Z",
+      "direction": "in",
+      "payload": {
+        "requestId": 0,
+        "response": "Success"
+      }
+    },
+    {
+      "t": "2026-06-18T02:04:07.973Z",
+      "direction": "in",
+      "payload": {
+        "meetingUpdate": {
+          "meetingPermissions": {
+            "canReact": true,
+            "canToggleVideo": true,
+            "canToggleMute": true,
+            "canToggleHand": true,
+            "canToggleShareTray": true,
+            "canLeave": true,
+            "canToggleBlur": true,
+            "canToggleChat": true,
+            "canStopSharing": false,
+            "canPair": true
+          }
+        }
+      }
+    },
+    {
+      "t": "2026-06-18T02:04:07.974Z",
+      "direction": "in",
+      "payload": {
+        "meetingUpdate": {
+          "meetingPermissions": {
+            "canReact": true,
+            "canToggleVideo": true,
+            "canToggleMute": true,
+            "canToggleHand": true,
+            "canToggleShareTray": true,
+            "canLeave": true,
+            "canToggleBlur": true,
+            "canToggleChat": true,
+            "canStopSharing": false,
+            "canPair": true
+          }
+        }
+      }
+    }
+  ],
+  "events": [
+    {
+      "t": "2026-06-18T02:04:07.909Z",
+      "event": "connecting",
+      "urlWithoutToken": "ws://127.0.0.1:8124?protocol-version=2.0.0&manufacturer=TeamDeck&device=Stream+Deck&app=TeamDeck&app-version=0.1.0",
+      "tokenPresent": true
+    },
+    {
+      "t": "2026-06-18T02:04:07.966Z",
+      "event": "open"
+    },
+    {
+      "t": "2026-06-18T02:04:07.967Z",
+      "event": "opening-second-client",
+      "info": "expect Teams to drop one connection (one client at a time)"
+    },
+    {
+      "t": "2026-06-18T02:04:07.967Z",
+      "event": "connecting",
+      "urlWithoutToken": "ws://127.0.0.1:8124?protocol-version=2.0.0&manufacturer=TeamDeck&device=Stream+Deck&app=TeamDeck&app-version=0.1.0",
+      "tokenPresent": true
+    },
+    {
+      "t": "2026-06-18T02:04:07.969Z",
+      "event": "response",
+      "response": "Success",
+      "requestId": 0
+    },
+    {
+      "t": "2026-06-18T02:04:07.971Z",
+      "event": "open"
+    },
+    {
+      "t": "2026-06-18T02:04:07.973Z",
+      "event": "response",
+      "response": "Success",
+      "requestId": 0
+    }
+  ],
+  "seen": {
+    "stateFields": {},
+    "permissionFields": {
+      "canReact": true,
+      "canToggleVideo": true,
+      "canToggleMute": true,
+      "canToggleHand": true,
+      "canToggleShareTray": true,
+      "canLeave": true,
+      "canToggleBlur": true,
+      "canToggleChat": true,
+      "canStopSharing": false,
+      "canPair": true
+    },
+    "reactions": {}
+  },
+  "endedAt": "2026-06-18T02:04:13.982Z"
+}

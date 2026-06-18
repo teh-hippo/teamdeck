@@ -1,0 +1,94 @@
+{
+  "mode": "observe",
+  "startedAt": "2026-06-18T01:58:26.742Z",
+  "identity": {
+    "manufacturer": "TeamDeck",
+    "device": "Stream Deck",
+    "app": "TeamDeck",
+    "appVersion": "0.1.0"
+  },
+  "messages": [
+    {
+      "t": "2026-06-18T01:58:26.798Z",
+      "direction": "in",
+      "payload": {
+        "requestId": 0,
+        "response": "Success"
+      }
+    },
+    {
+      "t": "2026-06-18T01:58:26.798Z",
+      "direction": "in",
+      "payload": {
+        "meetingUpdate": {
+          "meetingState": {
+            "isMuted": false,
+            "isRecordingOn": false,
+            "isVideoOn": false,
+            "hasUnreadMessages": false,
+            "isHandRaised": false,
+            "isSharing": false,
+            "isInMeeting": true,
+            "isBackgroundBlurred": false
+          },
+          "meetingPermissions": {
+            "canReact": true,
+            "canToggleVideo": true,
+            "canToggleMute": true,
+            "canToggleHand": true,
+            "canToggleShareTray": true,
+            "canLeave": true,
+            "canToggleBlur": false,
+            "canToggleChat": true,
+            "canStopSharing": false,
+            "canPair": false
+          }
+        }
+      }
+    }
+  ],
+  "events": [
+    {
+      "t": "2026-06-18T01:58:26.745Z",
+      "event": "connecting",
+      "urlWithoutToken": "ws://127.0.0.1:8124?protocol-version=2.0.0&manufacturer=TeamDeck&device=Stream+Deck&app=TeamDeck&app-version=0.1.0",
+      "tokenPresent": true
+    },
+    {
+      "t": "2026-06-18T01:58:26.797Z",
+      "event": "open"
+    },
+    {
+      "t": "2026-06-18T01:58:26.798Z",
+      "event": "response",
+      "response": "Success",
+      "requestId": 0
+    }
+  ],
+  "seen": {
+    "stateFields": {
+      "isMuted": false,
+      "isRecordingOn": false,
+      "isVideoOn": false,
+      "hasUnreadMessages": false,
+      "isHandRaised": false,
+      "isSharing": false,
+      "isInMeeting": true,
+      "isBackgroundBlurred": false
+    },
+    "permissionFields": {
+      "canReact": true,
+      "canToggleVideo": true,
+      "canToggleMute": true,
+      "canToggleHand": true,
+      "canToggleShareTray": true,
+      "canLeave": true,
+      "canToggleBlur": false,
+      "canToggleChat": true,
+      "canStopSharing": false,
+      "canPair": false
+    },
+    "reactions": {}
+  },
+  "endedAt": "2026-06-18T01:59:11.839Z"
+}

@@ -1,0 +1,75 @@
+{
+  "mode": "observe",
+  "startedAt": "2026-06-18T01:50:29.272Z",
+  "identity": {
+    "manufacturer": "TeamDeck",
+    "device": "Stream Deck",
+    "app": "TeamDeck",
+    "appVersion": "0.1.0"
+  },
+  "messages": [
+    {
+      "t": "2026-06-18T01:50:29.348Z",
+      "direction": "in",
+      "payload": {
+        "requestId": 0,
+        "response": "Success"
+      }
+    },
+    {
+      "t": "2026-06-18T01:50:29.349Z",
+      "direction": "in",
+      "payload": {
+        "meetingUpdate": {
+          "meetingPermissions": {
+            "canReact": false,
+            "canToggleVideo": false,
+            "canToggleMute": false,
+            "canToggleHand": false,
+            "canToggleShareTray": false,
+            "canLeave": false,
+            "canToggleBlur": false,
+            "canToggleChat": false,
+            "canStopSharing": false,
+            "canPair": false
+          }
+        }
+      }
+    }
+  ],
+  "events": [
+    {
+      "t": "2026-06-18T01:50:29.274Z",
+      "event": "connecting",
+      "urlWithoutToken": "ws://127.0.0.1:8124?protocol-version=2.0.0&manufacturer=TeamDeck&device=Stream+Deck&app=TeamDeck&app-version=0.1.0",
+      "tokenPresent": false
+    },
+    {
+      "t": "2026-06-18T01:50:29.343Z",
+      "event": "open"
+    },
+    {
+      "t": "2026-06-18T01:50:29.348Z",
+      "event": "response",
+      "response": "Success",
+      "requestId": 0
+    }
+  ],
+  "seen": {
+    "stateFields": {},
+    "permissionFields": {
+      "canReact": false,
+      "canToggleVideo": false,
+      "canToggleMute": false,
+      "canToggleHand": false,
+      "canToggleShareTray": false,
+      "canLeave": false,
+      "canToggleBlur": false,
+      "canToggleChat": false,
+      "canStopSharing": false,
+      "canPair": false
+    },
+    "reactions": {}
+  },
+  "endedAt": "2026-06-18T01:50:37.370Z"
+}

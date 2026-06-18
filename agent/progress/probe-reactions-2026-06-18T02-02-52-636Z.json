@@ -1,0 +1,284 @@
+{
+  "mode": "reactions",
+  "startedAt": "2026-06-18T02:02:52.636Z",
+  "identity": {
+    "manufacturer": "TeamDeck",
+    "device": "Stream Deck",
+    "app": "TeamDeck",
+    "appVersion": "0.1.0"
+  },
+  "messages": [
+    {
+      "t": "2026-06-18T02:02:52.723Z",
+      "direction": "in",
+      "payload": {
+        "requestId": 0,
+        "response": "Success"
+      }
+    },
+    {
+      "t": "2026-06-18T02:02:52.724Z",
+      "direction": "in",
+      "payload": {
+        "meetingUpdate": {
+          "meetingState": {
+            "isMuted": false,
+            "isRecordingOn": false,
+            "isVideoOn": true,
+            "hasUnreadMessages": false,
+            "isHandRaised": false,
+            "isSharing": false,
+            "isInMeeting": true,
+            "isBackgroundBlurred": false
+          },
+          "meetingPermissions": {
+            "canReact": true,
+            "canToggleVideo": true,
+            "canToggleMute": true,
+            "canToggleHand": true,
+            "canToggleShareTray": true,
+            "canLeave": true,
+            "canToggleBlur": true,
+            "canToggleChat": true,
+            "canStopSharing": false,
+            "canPair": false
+          }
+        }
+      }
+    },
+    {
+      "t": "2026-06-18T02:02:54.236Z",
+      "direction": "out",
+      "payload": {
+        "action": "send-reaction",
+        "parameters": {
+          "type": "like"
+        },
+        "requestId": 1
+      }
+    },
+    {
+      "t": "2026-06-18T02:02:54.242Z",
+      "direction": "in",
+      "payload": {
+        "requestId": 1,
+        "response": "Success"
+      }
+    },
+    {
+      "t": "2026-06-18T02:02:56.253Z",
+      "direction": "out",
+      "payload": {
+        "action": "send-reaction",
+        "parameters": {
+          "type": "love"
+        },
+        "requestId": 2
+      }
+    },
+    {
+      "t": "2026-06-18T02:02:56.275Z",
+      "direction": "in",
+      "payload": {
+        "requestId": 2,
+        "response": "Success"
+      }
+    },
+    {
+      "t": "2026-06-18T02:02:58.256Z",
+      "direction": "out",
+      "payload": {
+        "action": "send-reaction",
+        "parameters": {
+          "type": "applause"
+        },
+        "requestId": 3
+      }
+    },
+    {
+      "t": "2026-06-18T02:02:58.261Z",
+      "direction": "in",
+      "payload": {
+        "requestId": 3,
+        "response": "Success"
+      }
+    },
+    {
+      "t": "2026-06-18T02:03:00.265Z",
+      "direction": "out",
+      "payload": {
+        "action": "send-reaction",
+        "parameters": {
+          "type": "laugh"
+        },
+        "requestId": 4
+      }
+    },
+    {
+      "t": "2026-06-18T02:03:00.270Z",
+      "direction": "in",
+      "payload": {
+        "requestId": 4,
+        "response": "Success"
+      }
+    },
+    {
+      "t": "2026-06-18T02:03:02.272Z",
+      "direction": "out",
+      "payload": {
+        "action": "send-reaction",
+        "parameters": {
+          "type": "wow"
+        },
+        "requestId": 5
+      }
+    },
+    {
+      "t": "2026-06-18T02:03:02.276Z",
+      "direction": "in",
+      "payload": {
+        "requestId": 5,
+        "response": "Success"
+      }
+    }
+  ],
+  "events": [
+    {
+      "t": "2026-06-18T02:02:52.637Z",
+      "event": "connecting",
+      "urlWithoutToken": "ws://127.0.0.1:8124?protocol-version=2.0.0&manufacturer=TeamDeck&device=Stream+Deck&app=TeamDeck&app-version=0.1.0",
+      "tokenPresent": true
+    },
+    {
+      "t": "2026-06-18T02:02:52.721Z",
+      "event": "open"
+    },
+    {
+      "t": "2026-06-18T02:02:52.723Z",
+      "event": "response",
+      "response": "Success",
+      "requestId": 0
+    },
+    {
+      "t": "2026-06-18T02:02:52.724Z",
+      "event": "state-change",
+      "changed": [
+        "isMuted=false",
+        "isRecordingOn=false",
+        "isVideoOn=true",
+        "hasUnreadMessages=false",
+        "isHandRaised=false",
+        "isSharing=false",
+        "isInMeeting=true",
+        "isBackgroundBlurred=false"
+      ]
+    },
+    {
+      "t": "2026-06-18T02:02:54.237Z",
+      "event": "send",
+      "action": "send-reaction",
+      "requestId": 1
+    },
+    {
+      "t": "2026-06-18T02:02:54.242Z",
+      "event": "response",
+      "response": "Success",
+      "requestId": 1
+    },
+    {
+      "t": "2026-06-18T02:02:56.253Z",
+      "event": "send",
+      "action": "send-reaction",
+      "requestId": 2
+    },
+    {
+      "t": "2026-06-18T02:02:56.275Z",
+      "event": "response",
+      "response": "Success",
+      "requestId": 2
+    },
+    {
+      "t": "2026-06-18T02:02:58.256Z",
+      "event": "send",
+      "action": "send-reaction",
+      "requestId": 3
+    },
+    {
+      "t": "2026-06-18T02:02:58.261Z",
+      "event": "response",
+      "response": "Success",
+      "requestId": 3
+    },
+    {
+      "t": "2026-06-18T02:03:00.265Z",
+      "event": "send",
+      "action": "send-reaction",
+      "requestId": 4
+    },
+    {
+      "t": "2026-06-18T02:03:00.270Z",
+      "event": "response",
+      "response": "Success",
+      "requestId": 4
+    },
+    {
+      "t": "2026-06-18T02:03:02.272Z",
+      "event": "send",
+      "action": "send-reaction",
+      "requestId": 5
+    },
+    {
+      "t": "2026-06-18T02:03:02.276Z",
+      "event": "response",
+      "response": "Success",
+      "requestId": 5
+    }
+  ],
+  "seen": {
+    "stateFields": {
+      "isMuted": false,
+      "isRecordingOn": false,
+      "isVideoOn": true,
+      "hasUnreadMessages": false,
+      "isHandRaised": false,
+      "isSharing": false,
+      "isInMeeting": true,
+      "isBackgroundBlurred": false
+    },
+    "permissionFields": {
+      "canReact": true,
+      "canToggleVideo": true,
+      "canToggleMute": true,
+      "canToggleHand": true,
+      "canToggleShareTray": true,
+      "canLeave": true,
+      "canToggleBlur": true,
+      "canToggleChat": true,
+      "canStopSharing": false,
+      "canPair": false
+    },
+    "reactions": {
+      "like": {
+        "requestId": 1,
+        "sentAt": "2026-06-18T02:02:54.237Z"
+      },
+      "love": {
+        "requestId": 2,
+        "sentAt": "2026-06-18T02:02:56.254Z"
+      },
+      "applause": {
+        "requestId": 3,
+        "sentAt": "2026-06-18T02:02:58.257Z"
+      },
+      "laugh": {
+        "requestId": 4,
+        "sentAt": "2026-06-18T02:03:00.266Z"
+      },
+      "wow": {
+        "requestId": 5,
+        "sentAt": "2026-06-18T02:03:02.272Z"
+      }
+    }
+  },
+  "endedAt": "2026-06-18T02:03:06.291Z"
+}
