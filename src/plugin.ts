@@ -1,5 +1,7 @@
 import streamDeck from "@elgato/streamdeck";
 
+import { Camera } from "./actions/camera";
+import { Hand } from "./actions/hand";
 import { Mute } from "./actions/mute";
 import { teams } from "./teams/client";
 
@@ -8,6 +10,8 @@ import { teams } from "./teams/client";
 streamDeck.logger.setLevel("info");
 
 streamDeck.actions.registerAction(new Mute());
+streamDeck.actions.registerAction(new Camera());
+streamDeck.actions.registerAction(new Hand());
 
 // Register with Stream Deck first, then open the Teams connection so plugin registration is
 // never blocked by the external WebSocket.

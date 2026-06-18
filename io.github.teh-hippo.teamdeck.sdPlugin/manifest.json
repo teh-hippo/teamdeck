@@ -23,6 +23,48 @@
 					"TitleAlignment": "middle"
 				}
 			]
+		},
+		{
+			"Name": "Camera",
+			"UUID": "io.github.teh-hippo.teamdeck.camera",
+			"Icon": "imgs/actions/camera/icon",
+			"Tooltip": "Toggle your Microsoft Teams camera.",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/camera/off",
+					"Name": "Off",
+					"TitleAlignment": "middle"
+				},
+				{
+					"Image": "imgs/actions/camera/on",
+					"Name": "On",
+					"TitleAlignment": "middle"
+				}
+			]
+		},
+		{
+			"Name": "Raise Hand",
+			"UUID": "io.github.teh-hippo.teamdeck.hand",
+			"Icon": "imgs/actions/hand/icon",
+			"Tooltip": "Raise or lower your hand in Microsoft Teams.",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/hand/lowered",
+					"Name": "Lowered",
+					"TitleAlignment": "middle"
+				},
+				{
+					"Image": "imgs/actions/hand/raised",
+					"Name": "Raised",
+					"TitleAlignment": "middle"
+				}
+			]
 		}
 	],
 	"Category": "TeamDeck",
