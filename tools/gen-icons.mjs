@@ -36,75 +36,41 @@ const COLORS = {
   unavailable: "#3D3D3D",
 };
 
-const GLYPH_BY_PATH = {
-  "imgs/plugin/marketplace": "video_24_filled.svg",
-  "imgs/plugin/category-icon": "video_24_filled.svg",
-  "imgs/actions/mute/icon": "mic_24_filled.svg",
-  "imgs/actions/mute/on": "mic_24_filled.svg",
-  "imgs/actions/mute/off": "mic_off_24_filled.svg",
-  "imgs/actions/mute/disabled": "mic_off_24_regular.svg",
-  "imgs/actions/camera/icon": "video_24_filled.svg",
-  "imgs/actions/camera/on": "video_24_filled.svg",
-  "imgs/actions/camera/off": "video_off_24_filled.svg",
-  "imgs/actions/camera/disabled": "video_off_24_regular.svg",
-  "imgs/actions/hand/icon": "hand_right_24_regular.svg",
-  "imgs/actions/hand/raised": "hand_right_24_filled.svg",
-  "imgs/actions/hand/lowered": "hand_right_24_regular.svg",
-  "imgs/actions/hand/disabled": "hand_right_24_regular.svg",
-  "imgs/actions/blur/icon": "video_background_effect_24_filled.svg",
-  "imgs/actions/blur/on": "video_background_effect_24_filled.svg",
-  "imgs/actions/blur/off": "video_background_effect_24_regular.svg",
-  "imgs/actions/blur/disabled": "video_background_effect_24_regular.svg",
-  "imgs/actions/leave/icon": "call_end_24_filled.svg",
-  "imgs/actions/leave/enabled": "call_end_24_filled.svg",
-  "imgs/actions/leave/disabled": "call_end_24_regular.svg",
-  "imgs/actions/react/like-icon": "thumb_like_24_filled.svg",
-  "imgs/actions/react/like": "thumb_like_24_filled.svg",
-  "imgs/actions/react/love-icon": "heart_24_filled.svg",
-  "imgs/actions/react/love": "heart_24_filled.svg",
-  "imgs/actions/react/applause-icon": "hand_multiple_24_filled.svg",
-  "imgs/actions/react/applause": "hand_multiple_24_filled.svg",
-  "imgs/actions/react/laugh-icon": "emoji_laugh_24_filled.svg",
-  "imgs/actions/react/laugh": "emoji_laugh_24_filled.svg",
-  "imgs/actions/react/wow-icon": "emoji_surprise_24_filled.svg",
-  "imgs/actions/react/wow": "emoji_surprise_24_filled.svg",
-  "imgs/actions/react/disabled": "thumb_like_24_filled.svg",
-};
-
-// [relative path (no extension), base size, retina size, colour key]
+// [relative path (no extension), base size, retina size, colour key, glyph file]. Key images are
+// 72x144; every other size is rendered as a neutral glyph on a transparent background.
 const ICONS = [
-  ["imgs/plugin/marketplace", 288, 512, "brand"],
-  ["imgs/plugin/category-icon", 28, 56, "brand"],
-  ["imgs/actions/mute/icon", 20, 40, "neutral"],
-  ["imgs/actions/mute/on", 72, 144, "on"],
-  ["imgs/actions/mute/off", 72, 144, "off"],
-  ["imgs/actions/mute/disabled", 72, 144, "disabled"],
-  ["imgs/actions/camera/icon", 20, 40, "neutral"],
-  ["imgs/actions/camera/on", 72, 144, "on"],
-  ["imgs/actions/camera/off", 72, 144, "off"],
-  ["imgs/actions/camera/disabled", 72, 144, "disabled"],
-  ["imgs/actions/hand/icon", 20, 40, "neutral"],
-  ["imgs/actions/hand/raised", 72, 144, "raised"],
-  ["imgs/actions/hand/lowered", 72, 144, "lowered"],
-  ["imgs/actions/hand/disabled", 72, 144, "disabled"],
-  ["imgs/actions/blur/icon", 20, 40, "neutral"],
-  ["imgs/actions/blur/on", 72, 144, "on"],
-  ["imgs/actions/blur/off", 72, 144, "off"],
-  ["imgs/actions/blur/disabled", 72, 144, "disabled"],
-  ["imgs/actions/leave/icon", 20, 40, "leave"],
-  ["imgs/actions/leave/enabled", 72, 144, "leave"],
-  ["imgs/actions/leave/disabled", 72, 144, "disabled"],
-  ["imgs/actions/react/like-icon", 20, 40, "like"],
-  ["imgs/actions/react/like", 72, 144, "like"],
-  ["imgs/actions/react/love-icon", 20, 40, "love"],
-  ["imgs/actions/react/love", 72, 144, "love"],
-  ["imgs/actions/react/applause-icon", 20, 40, "applause"],
-  ["imgs/actions/react/applause", 72, 144, "applause"],
-  ["imgs/actions/react/laugh-icon", 20, 40, "laugh"],
-  ["imgs/actions/react/laugh", 72, 144, "laugh"],
-  ["imgs/actions/react/wow-icon", 20, 40, "wow"],
-  ["imgs/actions/react/wow", 72, 144, "wow"],
-  ["imgs/actions/react/disabled", 72, 144, "disabled"],
+  ["imgs/plugin/marketplace", 288, 512, "brand", "video_24_filled.svg"],
+  ["imgs/plugin/category-icon", 28, 56, "brand", "video_24_filled.svg"],
+  ["imgs/actions/mute/icon", 20, 40, "neutral", "mic_24_filled.svg"],
+  ["imgs/actions/mute/on", 72, 144, "on", "mic_24_filled.svg"],
+  ["imgs/actions/mute/off", 72, 144, "off", "mic_off_24_filled.svg"],
+  ["imgs/actions/mute/disabled", 72, 144, "disabled", "mic_off_24_regular.svg"],
+  ["imgs/actions/camera/icon", 20, 40, "neutral", "video_24_filled.svg"],
+  ["imgs/actions/camera/on", 72, 144, "on", "video_24_filled.svg"],
+  ["imgs/actions/camera/off", 72, 144, "off", "video_off_24_filled.svg"],
+  ["imgs/actions/camera/disabled", 72, 144, "disabled", "video_off_24_regular.svg"],
+  ["imgs/actions/hand/icon", 20, 40, "neutral", "hand_right_24_regular.svg"],
+  ["imgs/actions/hand/raised", 72, 144, "raised", "hand_right_24_filled.svg"],
+  ["imgs/actions/hand/lowered", 72, 144, "lowered", "hand_right_24_regular.svg"],
+  ["imgs/actions/hand/disabled", 72, 144, "disabled", "hand_right_24_regular.svg"],
+  ["imgs/actions/blur/icon", 20, 40, "neutral", "video_background_effect_24_filled.svg"],
+  ["imgs/actions/blur/on", 72, 144, "on", "video_background_effect_24_filled.svg"],
+  ["imgs/actions/blur/off", 72, 144, "off", "video_background_effect_24_regular.svg"],
+  ["imgs/actions/blur/disabled", 72, 144, "disabled", "video_background_effect_24_regular.svg"],
+  ["imgs/actions/leave/icon", 20, 40, "leave", "call_end_24_filled.svg"],
+  ["imgs/actions/leave/enabled", 72, 144, "leave", "call_end_24_filled.svg"],
+  ["imgs/actions/leave/disabled", 72, 144, "disabled", "call_end_24_regular.svg"],
+  ["imgs/actions/react/like-icon", 20, 40, "like", "thumb_like_24_filled.svg"],
+  ["imgs/actions/react/like", 72, 144, "like", "thumb_like_24_filled.svg"],
+  ["imgs/actions/react/love-icon", 20, 40, "love", "heart_24_filled.svg"],
+  ["imgs/actions/react/love", 72, 144, "love", "heart_24_filled.svg"],
+  ["imgs/actions/react/applause-icon", 20, 40, "applause", "hand_multiple_24_filled.svg"],
+  ["imgs/actions/react/applause", 72, 144, "applause", "hand_multiple_24_filled.svg"],
+  ["imgs/actions/react/laugh-icon", 20, 40, "laugh", "emoji_laugh_24_filled.svg"],
+  ["imgs/actions/react/laugh", 72, 144, "laugh", "emoji_laugh_24_filled.svg"],
+  ["imgs/actions/react/wow-icon", 20, 40, "wow", "emoji_surprise_24_filled.svg"],
+  ["imgs/actions/react/wow", 72, 144, "wow", "emoji_surprise_24_filled.svg"],
+  ["imgs/actions/react/disabled", 72, 144, "disabled", "thumb_like_24_filled.svg"],
 ];
 
 // Read-only status tiles share one regular shape: a neutral action-list glyph plus on/off/
@@ -116,16 +82,12 @@ const STATUS_TILES = [
   ["inmeeting", "people_24_filled.svg"],
 ];
 for (const [tile, glyph] of STATUS_TILES) {
-  for (const [variant, base, retina, colorKey] of [
-    ["icon", 20, 40, "neutral"],
-    ["on", 72, 144, tile],
-    ["off", 72, 144, "statusOff"],
-    ["unavailable", 72, 144, "unavailable"],
-  ]) {
-    const rel = `imgs/actions/${tile}/${variant}`;
-    GLYPH_BY_PATH[rel] = glyph;
-    ICONS.push([rel, base, retina, colorKey]);
-  }
+  ICONS.push(
+    [`imgs/actions/${tile}/icon`, 20, 40, "neutral", glyph],
+    [`imgs/actions/${tile}/on`, 72, 144, tile, glyph],
+    [`imgs/actions/${tile}/off`, 72, 144, "statusOff", glyph],
+    [`imgs/actions/${tile}/unavailable`, 72, 144, "unavailable", glyph],
+  );
 }
 
 function glyphTemplate(inner, size) {
@@ -145,17 +107,6 @@ function keyTemplate(inner, size, color) {
 </svg>`;
 }
 
-function iconColor(colorKey, isGlyph) {
-  if (isGlyph) {
-    return COLORS.neutralGlyph;
-  }
-  return COLORS[colorKey] ?? COLORS.disabled;
-}
-
-function isKeyIcon(base, retina) {
-  return base === 72 && retina === 144;
-}
-
 async function readGlyph(filename) {
   const svg = await readFile(join(glyphDir, filename), "utf8");
   const match = svg.match(/<svg\b[^>]*>([\s\S]*)<\/svg>/i);
@@ -173,23 +124,19 @@ async function renderPng(svg, size) {
     .toBuffer();
 }
 
-async function writeIcon(rel, size, colorKey, suffix) {
-  const glyphName = GLYPH_BY_PATH[rel];
-  if (!glyphName) {
-    throw new Error(`No glyph mapped for ${rel}`);
-  }
-  const isGlyph = !isKeyIcon(...ICONS.find(([iconRel]) => iconRel === rel).slice(1, 3));
-  const inner = await readGlyph(glyphName);
-  const color = iconColor(colorKey, isGlyph);
+async function writeIcon(rel, size, isGlyph, color, glyph, suffix) {
+  const inner = await readGlyph(glyph);
   const svg = isGlyph ? glyphTemplate(inner, size) : keyTemplate(inner, size, color);
   const out = join(sdPlugin, rel);
   await mkdir(dirname(out), { recursive: true });
   await writeFile(`${out}${suffix}.png`, await renderPng(svg, size));
 }
 
-for (const [rel, base, retina, colorKey] of ICONS) {
-  await writeIcon(rel, base, colorKey, "");
-  await writeIcon(rel, retina, colorKey, "@2x");
+for (const [rel, base, retina, colorKey, glyph] of ICONS) {
+  const isGlyph = !(base === 72 && retina === 144);
+  const color = isGlyph ? COLORS.neutralGlyph : (COLORS[colorKey] ?? COLORS.disabled);
+  await writeIcon(rel, base, isGlyph, color, glyph, "");
+  await writeIcon(rel, retina, isGlyph, color, glyph, "@2x");
   console.log(`wrote ${rel}.png (${base}) and @2x (${retina})`);
 }
 console.log("done");
