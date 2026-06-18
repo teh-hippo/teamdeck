@@ -1,15 +1,15 @@
 import { action } from "@elgato/streamdeck";
 
 import { teams } from "../teams/client";
-import type { ReactionType } from "../teams/types";
 import { type FireConfig, FireAction } from "./fire-action";
+import { REACTIONS } from "./toggle";
 
-/** Builds a reaction's FireConfig: gated on canReact, with the reaction's icon. */
-function reaction(type: ReactionType, image: string): FireConfig {
+/** Builds a reaction's FireConfig from a REACTIONS entry: gated on canReact, with its icon. */
+function reaction(spec: (typeof REACTIONS)[keyof typeof REACTIONS]): FireConfig {
 	return {
 		permission: "canReact",
-		command: () => teams.react(type),
-		images: { enabled: `imgs/actions/react/${image}`, disabled: "imgs/actions/react/disabled" },
+		command: () => teams.react(spec.type),
+		images: { enabled: `imgs/actions/react/${spec.image}`, disabled: "imgs/actions/react/disabled" },
 	};
 }
 
@@ -17,7 +17,7 @@ function reaction(type: ReactionType, image: string): FireConfig {
 @action({ UUID: "io.github.teh-hippo.teamdeck.applause" })
 export class Applause extends FireAction {
 	constructor() {
-		super(reaction("applause", "applause"));
+		super(reaction(REACTIONS.applause));
 	}
 }
 
@@ -25,7 +25,7 @@ export class Applause extends FireAction {
 @action({ UUID: "io.github.teh-hippo.teamdeck.laugh" })
 export class Laugh extends FireAction {
 	constructor() {
-		super(reaction("laugh", "laugh"));
+		super(reaction(REACTIONS.laugh));
 	}
 }
 
@@ -33,7 +33,7 @@ export class Laugh extends FireAction {
 @action({ UUID: "io.github.teh-hippo.teamdeck.like" })
 export class Like extends FireAction {
 	constructor() {
-		super(reaction("like", "like"));
+		super(reaction(REACTIONS.like));
 	}
 }
 
@@ -41,7 +41,7 @@ export class Like extends FireAction {
 @action({ UUID: "io.github.teh-hippo.teamdeck.love" })
 export class Love extends FireAction {
 	constructor() {
-		super(reaction("love", "love"));
+		super(reaction(REACTIONS.love));
 	}
 }
 
@@ -49,6 +49,7 @@ export class Love extends FireAction {
 @action({ UUID: "io.github.teh-hippo.teamdeck.surprised" })
 export class Surprised extends FireAction {
 	constructor() {
-		super(reaction("wow", "wow"));
+		super(reaction(REACTIONS.surprised));
 	}
 }
+

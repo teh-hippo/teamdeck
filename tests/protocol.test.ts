@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 
-import { actionable, buildUrl, mergePermissions, mergeState, pairingDecision, parseMessage } from "../src/teams/protocol.ts";
+import { actionable, buildUrl, mergePermissions, mergeState, pairingDecision, parseMessage, toggleBlurState } from "../src/teams/protocol.ts";
 import type { TeamsSnapshot } from "../src/teams/types.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -35,6 +35,14 @@ test("mergeState preserves omitted fields and ignores undefined", () => {
 	});
 	const prev = { isMuted: true };
 	assert.equal(mergeState(prev, undefined), prev);
+});
+
+test("toggleBlurState flips only background blur", () => {
+	assert.deepEqual(toggleBlurState({ isInMeeting: true, isBackgroundBlurred: false }), {
+		isInMeeting: true,
+		isBackgroundBlurred: true,
+	});
+	assert.deepEqual(toggleBlurState({ isBackgroundBlurred: true }), { isBackgroundBlurred: false });
 });
 
 test("pairingDecision maps token and canPair to an action", () => {
