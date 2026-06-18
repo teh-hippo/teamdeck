@@ -42,15 +42,16 @@ Legend: [x] done · [~] in progress · [ ] pending
 
 ## Phase 4 — Optional stretch (beyond original), isolated
 
-- [ ] p4-stretch — screen-share, chat toggle, status tiles, Smart Profile auto-switch [Stream B]
+- [x] p4-status-tiles — read-only status tiles (recording, screen-share, unread, in-meeting); merged to main
+- [ ] p4-stretch-more — screen-share control, chat toggle, Smart Profile auto-switch (deferred stretch)
 
-## Polished icons (parallel worktree, Stream A)
+## Polished icons (Stream A)
 
-- [ ] icons-fluent — polished Fluent-style icons for all 10 actions x on/off/unavailable
+- [x] icons-fluent — Fluent-style semantic icons (red=off, green=on, grey=unavailable) for all actions; merged to main
 
 ## Holistic review (after Streams A + B merge)
 
-- [ ] hr-reduce — reduce code without breaking functionality; re-run full proof gate
+- [~] hr-reduce — reduce code without breaking functionality; re-run full proof gate
 - [ ] hr-tests — audit/extend deterministic unit tests for quality coverage
 - [ ] hr-ci — GitHub Actions CI (build, validate, test, secret-scan, lint)
 - [ ] hr-lint — ESLint/Prettier + JS/TS best practices, wired into CI and the gate
