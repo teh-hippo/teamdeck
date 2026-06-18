@@ -78,3 +78,30 @@ test("fixture replay reproduces the captured state and permissions", () => {
 	assert.deepEqual(state, fixture.seen.stateFields);
 	assert.deepEqual(permissions, fixture.seen.permissionFields);
 });
+
+test("buildUrl url-encodes identity values", () => {
+	const url = buildUrl({ manufacturer: "A B", device: "C D", app: "E", appVersion: "1" });
+	assert.ok(url.includes("manufacturer=A+B"));
+	assert.ok(url.includes("device=C+D"));
+});
+
+test("mergePermissions merges and ignores undefined", () => {
+	assert.deepEqual(mergePermissions({ canToggleMute: true }, { canPair: false }), {
+		canToggleMute: true,
+		canPair: false,
+	});
+	const prev = { canPair: true };
+	assert.equal(mergePermissions(prev, undefined), prev);
+});
+
+test("actionable resolves per permission, requiring the matching permission", () => {
+	const snap: TeamsSnapshot = {
+		connected: true,
+		paired: true,
+		state: { isInMeeting: true, isVideoOn: false, isHandRaised: true },
+		permissions: { canToggleVideo: true, canToggleHand: true },
+	};
+	assert.equal(actionable(snap, "canToggleVideo"), true);
+	assert.equal(actionable(snap, "canToggleHand"), true);
+	assert.equal(actionable(snap, "canToggleMute"), false);
+});
