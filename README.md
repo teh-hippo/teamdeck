@@ -11,6 +11,11 @@ Teams is not the focused window, and the keys mirror your live meeting state.
 > are trademarks of their respective owners. TeamDeck is also unrelated to the resource
 > management product at teamdeck.io.
 
+> [!IMPORTANT]
+> Microsoft is retiring the Teams third-party app API that TeamDeck relies on on 30 June 2026
+> (Microsoft message centre MC1266901). After that date these controls stop working and there is
+> no replacement API, so TeamDeck is useful only until then.
+
 ## Actions
 
 Ten keys, matching the original plugin. The first four mirror live state and grey out when you
@@ -26,12 +31,18 @@ are not in a meeting; the rest fire while a meeting allows them.
 - Windows 10 or later.
 - The Elgato Stream Deck app 7.1 or later, and a Stream Deck device.
 
+## Install
+
+Download the latest `.streamDeckPlugin` from the [Releases](https://github.com/teh-hippo/teamdeck/releases)
+page and double-click it. The Stream Deck app installs and runs it; no Node, build tools, or
+terminal are required. To build it yourself instead, see [Building from source](#building-from-source).
+
 ## Setup
 
 1. In Teams, open Settings then Privacy, scroll to Third-party app API, choose Manage API, and
    turn on Enable API. If Manage API is missing or greyed out, your IT administrator has
    disabled third-party device pairing and TeamDeck will not be able to connect.
-2. Install TeamDeck (double-click the packaged `.streamDeckPlugin`, or build from source below).
+2. Install TeamDeck (see [Install](#install) above, or build from source below).
 3. Drag the TeamDeck actions onto your Stream Deck keys.
 4. Join a Teams meeting, then press a TeamDeck key. Teams shows a prompt asking whether to allow
    TeamDeck to connect. Choose Allow. Pairing happens once and the token is reused afterwards.
