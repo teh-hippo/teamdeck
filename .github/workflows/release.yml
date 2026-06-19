@@ -1,0 +1,37 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npm run proof
+      - name: Derive plugin version from tag
+        id: version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          if [[ "$TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "value=${TAG}.0" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${TAG}" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Pack plugin
+        run: npm run pack -- --output dist --version "${{ steps.version.outputs.value }}" --no-update-check --force
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.streamDeckPlugin
+          fail_on_unmatched_files: true
+          generate_release_notes: true
