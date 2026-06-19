@@ -14,7 +14,7 @@ sharp.cache(false);
 sharp.concurrency(1);
 
 const COLORS = {
-  neutralGlyph: "#242424",
+  listGlyph: "#E8EAED",
   tile: "#15171D",
   tileStroke: "#2E3440",
   on: "#3DDC84",
@@ -36,8 +36,15 @@ const COLORS = {
   unavailable: "#3D3D3D",
 };
 
+// Action-list glyph colour: reaction icons keep their accent (so each one is distinct); everything
+// else (toggles, status tiles, leave, brand) uses a light neutral that reads on the dark Stream
+// Deck UI. Previously every glyph used a near-black neutral and was invisible in the action list.
+const REACTION_ACCENTS = new Set(["like", "love", "applause", "laugh", "wow"]);
+const glyphColor = (colorKey) => (REACTION_ACCENTS.has(colorKey) ? COLORS[colorKey] : COLORS.listGlyph);
+
 // [relative path (no extension), base size, retina size, colour key, glyph file]. Key images are
-// 72x144; every other size is rendered as a neutral glyph on a transparent background.
+// 72x144 (a coloured glyph on a dark tile); every other size is an action-list glyph on a
+// transparent background, coloured by glyphColor() above.
 const ICONS = [
   ["imgs/plugin/marketplace", 288, 512, "brand", "video_24_filled.svg"],
   ["imgs/plugin/category-icon", 28, 56, "brand", "video_24_filled.svg"],
@@ -90,10 +97,10 @@ for (const [tile, glyph] of STATUS_TILES) {
   );
 }
 
-function glyphTemplate(inner, size) {
+function glyphTemplate(inner, size, color) {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="${size}" height="${size}" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-  <g transform="translate(3 3) scale(0.75)" fill="${COLORS.neutralGlyph}">${inner}</g>
+  <g transform="translate(3 3) scale(0.75)" fill="${color}">${inner}</g>
 </svg>`;
 }
 
@@ -126,7 +133,7 @@ async function renderPng(svg, size) {
 
 async function writeIcon(rel, size, isGlyph, color, glyph, suffix) {
   const inner = await readGlyph(glyph);
-  const svg = isGlyph ? glyphTemplate(inner, size) : keyTemplate(inner, size, color);
+  const svg = isGlyph ? glyphTemplate(inner, size, color) : keyTemplate(inner, size, color);
   const out = join(sdPlugin, rel);
   await mkdir(dirname(out), { recursive: true });
   await writeFile(`${out}${suffix}.png`, await renderPng(svg, size));
@@ -134,7 +141,7 @@ async function writeIcon(rel, size, isGlyph, color, glyph, suffix) {
 
 for (const [rel, base, retina, colorKey, glyph] of ICONS) {
   const isGlyph = !(base === 72 && retina === 144);
-  const color = isGlyph ? COLORS.neutralGlyph : (COLORS[colorKey] ?? COLORS.disabled);
+  const color = isGlyph ? glyphColor(colorKey) : (COLORS[colorKey] ?? COLORS.disabled);
   await writeIcon(rel, base, isGlyph, color, glyph, "");
   await writeIcon(rel, retina, isGlyph, color, glyph, "@2x");
   console.log(`wrote ${rel}.png (${base}) and @2x (${retina})`);
