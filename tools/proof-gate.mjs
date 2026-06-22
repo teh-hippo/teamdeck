@@ -7,6 +7,7 @@ import { readFileSync } from "node:fs";
 const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
 
 const steps = [
+	["typecheck", "npm run typecheck"],
 	["build", "npm run build"],
 	["validate", "npm run validate"],
 	["check-icons", "npm run check-icons"],
