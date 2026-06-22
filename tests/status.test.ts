@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { IN_MEETING, RECORDING, selectStatusImage, SHARING, type StatusSpec, UNREAD } from "../src/actions/status.ts";
+import { IN_MEETING, RECORDING, SHARING, type StatusSpec, selectStatusImage, UNREAD } from "../src/actions/status.ts";
 import type { MeetingState, TeamsSnapshot } from "../src/teams/types.ts";
 
 const specs: Array<{ name: string; spec: StatusSpec }> = [
