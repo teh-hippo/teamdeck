@@ -1,4 +1,4 @@
-/** Live meeting state reported by Teams (`meetingUpdate.meetingState`). */
+/** Live meeting state, as mapped from the helper snapshot. */
 export type MeetingState = {
 	isMuted: boolean;
 	isVideoOn: boolean;
@@ -10,7 +10,7 @@ export type MeetingState = {
 	hasUnreadMessages: boolean;
 };
 
-/** Capabilities reported by Teams (`meetingUpdate.meetingPermissions`). */
+/** Per-action capabilities, synthesized from what the helper can observe and actuate. */
 export type MeetingPermissions = {
 	canToggleMute: boolean;
 	canToggleVideo: boolean;

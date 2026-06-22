@@ -66,7 +66,7 @@ export type KeyConfig = {
 
 /**
  * Shared base for Teams meeting keys. Renders live state and, on press, runs the command when
- * actionable or otherwise recovers a stuck socket / re-triggers a missed pairing prompt.
+ * actionable, or otherwise asks the helper to recover (a no-op when it is healthy).
  */
 export abstract class MeetingKeyAction extends RenderingKeyAction {
 	readonly #permission: keyof MeetingPermissions;
@@ -82,7 +82,7 @@ export abstract class MeetingKeyAction extends RenderingKeyAction {
 		if (teams.isActionable(this.#permission)) {
 			this.#command();
 		} else {
-			// Not actionable: recover a stuck socket or a missed pairing prompt (no-op if healthy).
+			// Not actionable: ask the helper to recover, e.g. respawn if it died (no-op when healthy).
 			teams.recover();
 		}
 	}

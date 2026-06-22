@@ -12,9 +12,9 @@ const MAX_RESTART_DELAY = 30_000;
 type HelperMessage = HelperSnapshot & { type?: string; ok?: boolean; cmd?: string };
 
 /**
- * A Teams source backed by the native UI-Automation helper (built from `spikes/helper`, shipped as
+ * A Teams source backed by the native UI-Automation helper (built from `native/`, shipped as
  * `bin/teamdeck-helper.exe`). Spawns it in `serve` mode, parses its newline-delimited snapshot
- * stream, and sends control commands on stdin. This is the post-third-party-API source.
+ * stream, and sends control commands on stdin.
  */
 export class HelperClient {
 	#proc?: ChildProcess;
