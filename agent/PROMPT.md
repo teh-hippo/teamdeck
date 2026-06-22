@@ -6,28 +6,30 @@ the session plan; this file plus the SQL backlog drive execution.
 
 ## Mission
 
-Faithfully recreate the discontinued Microsoft "Microsoft Teams" Stream Deck plugin as an OSS
-plugin (`@elgato/streamdeck`, TypeScript), targeting new Teams (work/school) on Windows, tested
-on a Stream Deck Neo. Original feature set = 10 actions: Mute, Camera, Background Blur, Raise
-Hand (live-state toggles) + Leave + 5 reactions (Applause, Laugh, Like, Love, Surprised=`wow`).
+Recreate the discontinued Microsoft "Microsoft Teams" Stream Deck plugin as an OSS plugin
+(`@elgato/streamdeck`, TypeScript) for new Teams (work/school) on Windows, tested on a Stream Deck
+Neo. State and control come from a native Windows UI Automation helper (`native/`), since the Teams
+third-party app API it first used retires on 30 June 2026. Actions: Mute, Camera, Raise Hand
+(live-state toggles) + Leave + 5 reactions (Applause, Laugh, Like, Love, Surprised=`wow`); read-only
+In Meeting and Screen Sharing tiles.
 
 ## Principles
 
 - Evidence over assumption. Reference repos are leads, not truth: verify against
-  `agent/specs/protocol.md` (empirically captured) and live testing.
+  `agent/specs/helper.md` (the helper contract) and live testing.
 - De-risk core unknowns early; do not front-load every research task.
 - Phase-gated autonomy: work autonomously within a phase, then stop at the phase boundary for
   human + expert-panel review.
 - Granular commits (one logical change each) with the Co-authored-by trailer. Australian
   English in docs and commit messages; no emdash; minimal code comments.
-- The Teams pairing token is a secret: never log it (keep the SD log level off `trace`), never
-  commit it. `agent/progress/probe-token.json` and `**/*.secret.json` are gitignored.
+- Keep the Stream Deck log level off `trace` (it logs every Stream Deck message). Never commit
+  secrets; `**/*.secret.json` is gitignored and a pre-commit secret scan runs.
 
 ## Each iteration
 
 1. Pick the next ready todo from the SQL backlog: `status='pending'` with all `todo_deps`
    satisfied, within the current phase. Set it `in_progress`.
-2. Implement the smallest correct change. Consult `agent/specs/protocol.md` and
+2. Implement the smallest correct change. Consult `agent/specs/helper.md` and
    `agent/specs/architecture.md`.
 3. Prove it with the tiered proof gate (below). Never commit unproven work.
 4. Commit granularly. Update the todo to `done` (or `blocked` with a reason).
@@ -36,18 +38,12 @@ Hand (live-state toggles) + Leave + 5 reactions (Applause, Laugh, Like, Love, Su
 ## Tiered proof gate
 
 - Tier A (blocking, every iteration, fully autonomous): `node tools/proof-gate.mjs` runs
-  `npm run build`, `streamdeck validate`, and `npm test` (deterministic unit/fixture-replay
-  tests against a mock Teams server and the captured fixtures). Fail closed.
-- Tier B (opportunistic, non-blocking): if a paired token and a live meeting are available, run
-  a live probe (`tools/probe/probe.mjs`) to confirm behaviour; if unavailable, defer to the gate.
+  `npm run typecheck`, `npm run build`, `streamdeck validate`, the icon check, and `npm test`
+  (deterministic unit tests). Fail closed. It does not spawn the helper.
+- Tier B (opportunistic, non-blocking): if a live meeting is available, run the built helper
+  (`teamdeck-helper.exe`, read mode) or drive a key to confirm behaviour; otherwise defer.
 - Tier C (human-attended, at the phase gate): full live matrix on the Neo in a solo "Meet now".
-  Destructive or visible commands (`leave-call`, reactions) run ONLY here.
-
-## Single-socket discipline
-
-Teams binds the token to the identity tuple in `shared/identity.json`; the probe and the plugin
-share it. Never run the probe and the plugin against Teams at the same time — stop/unlink the
-plugin first. Treat any unexpected socket close as a reconnect trigger.
+  Destructive or visible commands (`leave`, reactions) run ONLY here.
 
 ## Guardrails
 
@@ -59,6 +55,6 @@ plugin first. Treat any unexpected socket close as a reconnect trigger.
 ## Environment notes (verified)
 
 - Run `streamdeck` CLI commands (link/restart/validate/pack) from Windows PowerShell, not WSL.
-- Dev box is Windows ARM64; the plugin is pure-JS and runs under the x64 Stream Deck app via
-  Prism. Node is supplied to the plugin by the Stream Deck app (manifest `Nodejs.Version: 24`).
+- Dev box is Windows ARM64; the Stream Deck app is x64, so it runs the plugin under x64 Node
+  (manifest `Nodejs.Version: 24`) and the bundled x64 helper runs fine under emulation.
 - Enable developer mode once with `streamdeck dev` (already done) to allow link/restart.

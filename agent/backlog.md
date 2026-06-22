@@ -6,6 +6,10 @@ tracker is the session SQL backlog.
 
 Legend: [x] done · [~] in progress · [ ] pending
 
+> TeamDeck has since migrated from the retiring Teams third-party app API to a native Windows UI
+> Automation helper (a clean cut). The phases below are the original API-based build; the migration,
+> releases, linting and code reduction are tracked live in the session backlog.
+
 ## Phase 0 — Foundation and base-integration proof
 
 - [x] p0a-cli-and-smoke — install @elgato/cli, confirm native ARM64
