@@ -5,8 +5,7 @@ import streamDeck from "@elgato/streamdeck";
 
 import { HELPER_DISCONNECTED, type HelperSnapshot, mapHelperSnapshot } from "./helper-map";
 import { helperPath } from "./helper-path";
-import type { Listener, TeamsSource } from "./source";
-import type { MeetingPermissions, ReactionType, TeamsSnapshot } from "./types";
+import type { Listener, MeetingPermissions, ReactionType, TeamsSnapshot } from "./types";
 
 const MAX_RESTART_DELAY = 30_000;
 
@@ -17,7 +16,7 @@ type HelperMessage = HelperSnapshot & { type?: string; ok?: boolean; cmd?: strin
  * `bin/teamdeck-helper.exe`). Spawns it in `serve` mode, parses its newline-delimited snapshot
  * stream, and sends control commands on stdin. This is the post-third-party-API source.
  */
-export class HelperClient implements TeamsSource {
+export class HelperClient {
 	#proc?: ChildProcess;
 	#stopped = true;
 	#snapshot: TeamsSnapshot = HELPER_DISCONNECTED;
