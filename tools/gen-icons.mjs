@@ -14,26 +14,26 @@ sharp.cache(false);
 sharp.concurrency(1);
 
 const COLORS = {
-  listGlyph: "#E8EAED",
-  tile: "#15171D",
-  tileStroke: "#2E3440",
-  on: "#3DDC84",
-  off: "#FF5A5F",
-  raised: "#F4B740",
-  lowered: "#8FA4B8",
-  leave: "#FF5A5F",
-  like: "#60A5FA",
-  love: "#F472B6",
-  applause: "#4ADE80",
-  laugh: "#FBBF24",
-  wow: "#C084FC",
-  disabled: "#6B7280",
-  recording: "#D13438",
-  sharing: "#2563EB",
-  unread: "#F59E0B",
-  inmeeting: "#2EA043",
-  statusOff: "#5A6B7B",
-  unavailable: "#3D3D3D",
+	listGlyph: "#E8EAED",
+	tile: "#15171D",
+	tileStroke: "#2E3440",
+	on: "#3DDC84",
+	off: "#FF5A5F",
+	raised: "#F4B740",
+	lowered: "#8FA4B8",
+	leave: "#FF5A5F",
+	like: "#60A5FA",
+	love: "#F472B6",
+	applause: "#4ADE80",
+	laugh: "#FBBF24",
+	wow: "#C084FC",
+	disabled: "#6B7280",
+	recording: "#D13438",
+	sharing: "#2563EB",
+	unread: "#F59E0B",
+	inmeeting: "#2EA043",
+	statusOff: "#5A6B7B",
+	unavailable: "#3D3D3D",
 };
 
 // Action-list glyph colour: reaction icons keep their accent (so each one is distinct); everything
@@ -46,66 +46,66 @@ const glyphColor = (colorKey) => (REACTION_ACCENTS.has(colorKey) ? COLORS[colorK
 // 72x144 (a coloured glyph on a dark tile); every other size is an action-list glyph on a
 // transparent background, coloured by glyphColor() above.
 const ICONS = [
-  ["imgs/plugin/marketplace", 288, 512, "brand", "video_24_filled.svg"],
-  ["imgs/plugin/category-icon", 28, 56, "brand", "video_24_filled.svg"],
-  ["imgs/actions/mute/icon", 20, 40, "neutral", "mic_24_filled.svg"],
-  ["imgs/actions/mute/on", 72, 144, "on", "mic_24_filled.svg"],
-  ["imgs/actions/mute/off", 72, 144, "off", "mic_off_24_filled.svg"],
-  ["imgs/actions/mute/disabled", 72, 144, "disabled", "mic_off_24_regular.svg"],
-  ["imgs/actions/camera/icon", 20, 40, "neutral", "video_24_filled.svg"],
-  ["imgs/actions/camera/on", 72, 144, "on", "video_24_filled.svg"],
-  ["imgs/actions/camera/off", 72, 144, "off", "video_off_24_filled.svg"],
-  ["imgs/actions/camera/disabled", 72, 144, "disabled", "video_off_24_regular.svg"],
-  ["imgs/actions/hand/icon", 20, 40, "neutral", "hand_right_24_regular.svg"],
-  ["imgs/actions/hand/raised", 72, 144, "raised", "hand_right_24_filled.svg"],
-  ["imgs/actions/hand/lowered", 72, 144, "lowered", "hand_right_24_regular.svg"],
-  ["imgs/actions/hand/disabled", 72, 144, "disabled", "hand_right_24_regular.svg"],
-  ["imgs/actions/blur/icon", 20, 40, "neutral", "video_background_effect_24_filled.svg"],
-  ["imgs/actions/blur/on", 72, 144, "on", "video_background_effect_24_filled.svg"],
-  ["imgs/actions/blur/off", 72, 144, "off", "video_background_effect_24_regular.svg"],
-  ["imgs/actions/blur/disabled", 72, 144, "disabled", "video_background_effect_24_regular.svg"],
-  ["imgs/actions/leave/icon", 20, 40, "leave", "call_end_24_filled.svg"],
-  ["imgs/actions/leave/enabled", 72, 144, "leave", "call_end_24_filled.svg"],
-  ["imgs/actions/leave/disabled", 72, 144, "disabled", "call_end_24_regular.svg"],
-  ["imgs/actions/react/like-icon", 20, 40, "like", "thumb_like_24_filled.svg"],
-  ["imgs/actions/react/like", 72, 144, "like", "thumb_like_24_filled.svg"],
-  ["imgs/actions/react/love-icon", 20, 40, "love", "heart_24_filled.svg"],
-  ["imgs/actions/react/love", 72, 144, "love", "heart_24_filled.svg"],
-  ["imgs/actions/react/applause-icon", 20, 40, "applause", "hand_multiple_24_filled.svg"],
-  ["imgs/actions/react/applause", 72, 144, "applause", "hand_multiple_24_filled.svg"],
-  ["imgs/actions/react/laugh-icon", 20, 40, "laugh", "emoji_laugh_24_filled.svg"],
-  ["imgs/actions/react/laugh", 72, 144, "laugh", "emoji_laugh_24_filled.svg"],
-  ["imgs/actions/react/wow-icon", 20, 40, "wow", "emoji_surprise_24_filled.svg"],
-  ["imgs/actions/react/wow", 72, 144, "wow", "emoji_surprise_24_filled.svg"],
-  ["imgs/actions/react/disabled", 72, 144, "disabled", "thumb_like_24_filled.svg"],
+	["imgs/plugin/marketplace", 288, 512, "brand", "video_24_filled.svg"],
+	["imgs/plugin/category-icon", 28, 56, "brand", "video_24_filled.svg"],
+	["imgs/actions/mute/icon", 20, 40, "neutral", "mic_24_filled.svg"],
+	["imgs/actions/mute/on", 72, 144, "on", "mic_24_filled.svg"],
+	["imgs/actions/mute/off", 72, 144, "off", "mic_off_24_filled.svg"],
+	["imgs/actions/mute/disabled", 72, 144, "disabled", "mic_off_24_regular.svg"],
+	["imgs/actions/camera/icon", 20, 40, "neutral", "video_24_filled.svg"],
+	["imgs/actions/camera/on", 72, 144, "on", "video_24_filled.svg"],
+	["imgs/actions/camera/off", 72, 144, "off", "video_off_24_filled.svg"],
+	["imgs/actions/camera/disabled", 72, 144, "disabled", "video_off_24_regular.svg"],
+	["imgs/actions/hand/icon", 20, 40, "neutral", "hand_right_24_regular.svg"],
+	["imgs/actions/hand/raised", 72, 144, "raised", "hand_right_24_filled.svg"],
+	["imgs/actions/hand/lowered", 72, 144, "lowered", "hand_right_24_regular.svg"],
+	["imgs/actions/hand/disabled", 72, 144, "disabled", "hand_right_24_regular.svg"],
+	["imgs/actions/blur/icon", 20, 40, "neutral", "video_background_effect_24_filled.svg"],
+	["imgs/actions/blur/on", 72, 144, "on", "video_background_effect_24_filled.svg"],
+	["imgs/actions/blur/off", 72, 144, "off", "video_background_effect_24_regular.svg"],
+	["imgs/actions/blur/disabled", 72, 144, "disabled", "video_background_effect_24_regular.svg"],
+	["imgs/actions/leave/icon", 20, 40, "leave", "call_end_24_filled.svg"],
+	["imgs/actions/leave/enabled", 72, 144, "leave", "call_end_24_filled.svg"],
+	["imgs/actions/leave/disabled", 72, 144, "disabled", "call_end_24_regular.svg"],
+	["imgs/actions/react/like-icon", 20, 40, "like", "thumb_like_24_filled.svg"],
+	["imgs/actions/react/like", 72, 144, "like", "thumb_like_24_filled.svg"],
+	["imgs/actions/react/love-icon", 20, 40, "love", "heart_24_filled.svg"],
+	["imgs/actions/react/love", 72, 144, "love", "heart_24_filled.svg"],
+	["imgs/actions/react/applause-icon", 20, 40, "applause", "hand_multiple_24_filled.svg"],
+	["imgs/actions/react/applause", 72, 144, "applause", "hand_multiple_24_filled.svg"],
+	["imgs/actions/react/laugh-icon", 20, 40, "laugh", "emoji_laugh_24_filled.svg"],
+	["imgs/actions/react/laugh", 72, 144, "laugh", "emoji_laugh_24_filled.svg"],
+	["imgs/actions/react/wow-icon", 20, 40, "wow", "emoji_surprise_24_filled.svg"],
+	["imgs/actions/react/wow", 72, 144, "wow", "emoji_surprise_24_filled.svg"],
+	["imgs/actions/react/disabled", 72, 144, "disabled", "thumb_like_24_filled.svg"],
 ];
 
 // Read-only status tiles share one regular shape: a neutral action-list glyph plus on/off/
 // unavailable key images, coloured by status. Expanded here to avoid a second generator.
 const STATUS_TILES = [
-  ["recording", "record_24_filled.svg"],
-  ["sharing", "share_screen_start_24_filled.svg"],
-  ["unread", "chat_24_filled.svg"],
-  ["inmeeting", "people_24_filled.svg"],
+	["recording", "record_24_filled.svg"],
+	["sharing", "share_screen_start_24_filled.svg"],
+	["unread", "chat_24_filled.svg"],
+	["inmeeting", "people_24_filled.svg"],
 ];
 for (const [tile, glyph] of STATUS_TILES) {
-  ICONS.push(
-    [`imgs/actions/${tile}/icon`, 20, 40, "neutral", glyph],
-    [`imgs/actions/${tile}/on`, 72, 144, tile, glyph],
-    [`imgs/actions/${tile}/off`, 72, 144, "statusOff", glyph],
-    [`imgs/actions/${tile}/unavailable`, 72, 144, "unavailable", glyph],
-  );
+	ICONS.push(
+		[`imgs/actions/${tile}/icon`, 20, 40, "neutral", glyph],
+		[`imgs/actions/${tile}/on`, 72, 144, tile, glyph],
+		[`imgs/actions/${tile}/off`, 72, 144, "statusOff", glyph],
+		[`imgs/actions/${tile}/unavailable`, 72, 144, "unavailable", glyph],
+	);
 }
 
 function glyphTemplate(inner, size, color) {
-  return `<?xml version="1.0" encoding="UTF-8"?>
+	return `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="${size}" height="${size}" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
   <g transform="translate(3 3) scale(0.75)" fill="${color}">${inner}</g>
 </svg>`;
 }
 
 function keyTemplate(inner, size, color) {
-  return `<?xml version="1.0" encoding="UTF-8"?>
+	return `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="${size}" height="${size}" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
   <rect x="5" y="5" width="62" height="62" rx="16" fill="${COLORS.tile}"/>
   <rect x="5.75" y="5.75" width="60.5" height="60.5" rx="15.25" fill="none" stroke="${COLORS.tileStroke}" stroke-width="1.5"/>
@@ -115,35 +115,35 @@ function keyTemplate(inner, size, color) {
 }
 
 async function readGlyph(filename) {
-  const svg = await readFile(join(glyphDir, filename), "utf8");
-  const match = svg.match(/<svg\b[^>]*>([\s\S]*)<\/svg>/i);
-  if (!match) {
-    throw new Error(`Cannot read glyph content from ${filename}`);
-  }
-  return match[1];
+	const svg = await readFile(join(glyphDir, filename), "utf8");
+	const match = svg.match(/<svg\b[^>]*>([\s\S]*)<\/svg>/i);
+	if (!match) {
+		throw new Error(`Cannot read glyph content from ${filename}`);
+	}
+	return match[1];
 }
 
 async function renderPng(svg, size) {
-  return sharp(Buffer.from(svg))
-    .resize(size, size, { fit: "fill" })
-    .png({ compressionLevel: 9, palette: false, adaptiveFiltering: false })
-    .withMetadata({})
-    .toBuffer();
+	return sharp(Buffer.from(svg))
+		.resize(size, size, { fit: "fill" })
+		.png({ compressionLevel: 9, palette: false, adaptiveFiltering: false })
+		.withMetadata({})
+		.toBuffer();
 }
 
 async function writeIcon(rel, size, isGlyph, color, glyph, suffix) {
-  const inner = await readGlyph(glyph);
-  const svg = isGlyph ? glyphTemplate(inner, size, color) : keyTemplate(inner, size, color);
-  const out = join(sdPlugin, rel);
-  await mkdir(dirname(out), { recursive: true });
-  await writeFile(`${out}${suffix}.png`, await renderPng(svg, size));
+	const inner = await readGlyph(glyph);
+	const svg = isGlyph ? glyphTemplate(inner, size, color) : keyTemplate(inner, size, color);
+	const out = join(sdPlugin, rel);
+	await mkdir(dirname(out), { recursive: true });
+	await writeFile(`${out}${suffix}.png`, await renderPng(svg, size));
 }
 
 for (const [rel, base, retina, colorKey, glyph] of ICONS) {
-  const isGlyph = !(base === 72 && retina === 144);
-  const color = isGlyph ? glyphColor(colorKey) : (COLORS[colorKey] ?? COLORS.disabled);
-  await writeIcon(rel, base, isGlyph, color, glyph, "");
-  await writeIcon(rel, retina, isGlyph, color, glyph, "@2x");
-  console.log(`wrote ${rel}.png (${base}) and @2x (${retina})`);
+	const isGlyph = !(base === 72 && retina === 144);
+	const color = isGlyph ? glyphColor(colorKey) : (COLORS[colorKey] ?? COLORS.disabled);
+	await writeIcon(rel, base, isGlyph, color, glyph, "");
+	await writeIcon(rel, retina, isGlyph, color, glyph, "@2x");
+	console.log(`wrote ${rel}.png (${base}) and @2x (${retina})`);
 }
 console.log("done");
