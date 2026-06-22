@@ -23,6 +23,11 @@ export function selectImage(spec: ToggleSpec, snapshot: TeamsSnapshot): string {
 	if (!isActionable(snapshot, spec.permission)) {
 		return spec.images.disabled;
 	}
+	// Never render a definite on/off when the state is unknown (e.g. hand state, which is only
+	// readable behind the React flyout). Show the neutral/disabled image rather than a fake "off".
+	if (snapshot.availability && snapshot.availability[spec.stateField] === false) {
+		return spec.images.disabled;
+	}
 	return snapshot.state[spec.stateField] ? spec.images.whenTrue : spec.images.whenFalse;
 }
 
