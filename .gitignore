@@ -8,6 +8,7 @@ node_modules/
 *.streamDeckPlugin
 io.github.teh-hippo.teamdeck.sdPlugin/bin/
 io.github.teh-hippo.teamdeck.sdPlugin/logs/
+native/target/
 
 # Logs
 *.log

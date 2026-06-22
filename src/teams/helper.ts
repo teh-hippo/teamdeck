@@ -1,12 +1,10 @@
 import { spawn, type ChildProcess } from "node:child_process";
-import { existsSync } from "node:fs";
-import path from "node:path";
 import { createInterface } from "node:readline";
-import { fileURLToPath } from "node:url";
 
 import streamDeck from "@elgato/streamdeck";
 
 import { HELPER_DISCONNECTED, type HelperSnapshot, mapHelperSnapshot } from "./helper-map";
+import { helperPath } from "./helper-path";
 import type { Listener, TeamsSource } from "./source";
 import type { MeetingPermissions, ReactionType, TeamsSnapshot } from "./types";
 
@@ -188,23 +186,5 @@ export class HelperClient implements TeamsSource {
 		for (const listener of this.#listeners) {
 			listener(snapshot);
 		}
-	}
-}
-
-/** Resolves the helper binary: env override, then bundled `bin/`, then the dev spike build. */
-function helperPath(): string | undefined {
-	const candidates = [
-		process.env.TEAMDECK_HELPER_PATH,
-		pluginRelative("teamdeck-helper.exe"),
-		pluginRelative("../../spikes/helper/target/debug/teamdeck-helper.exe"),
-	];
-	return candidates.find((p): p is string => Boolean(p) && existsSync(p as string));
-}
-
-function pluginRelative(rel: string): string | undefined {
-	try {
-		return path.resolve(path.dirname(fileURLToPath(import.meta.url)), rel);
-	} catch {
-		return undefined;
 	}
 }
