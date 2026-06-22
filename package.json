@@ -1,7 +1,7 @@
 {
 	"name": "teamdeck",
 	"version": "0.1.1",
-	"description": "Control Microsoft Teams meetings from an Elgato Stream Deck, using the Teams third-party app API. Not affiliated with Microsoft or Elgato.",
+	"description": "Control Microsoft Teams meetings from an Elgato Stream Deck. Mirrors live meeting state and controls Teams via Windows UI Automation. Not affiliated with Microsoft or Elgato.",
 	"author": "teh-hippo",
 	"license": "MIT",
 	"repository": {
