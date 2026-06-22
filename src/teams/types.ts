@@ -27,6 +27,9 @@ export type MeetingPermissions = {
 /** Reaction types accepted by the `send-reaction` command. */
 export type ReactionType = "like" | "love" | "applause" | "laugh" | "wow";
 
+/** A subscriber to snapshot updates. */
+export type Listener = (snapshot: TeamsSnapshot) => void;
+
 /** Snapshot of the Teams connection broadcast to subscribers. */
 export type TeamsSnapshot = {
 	connected: boolean;
