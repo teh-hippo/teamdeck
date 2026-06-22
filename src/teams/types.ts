@@ -33,4 +33,10 @@ export type TeamsSnapshot = {
 	paired: boolean;
 	state: Partial<MeetingState>;
 	permissions: Partial<MeetingPermissions>;
+	/**
+	 * Per-field knowledge map. When a field is explicitly `false`, its value is unknown and keys
+	 * must render "unavailable" rather than a (possibly wrong) on/off state. Absent (legacy source)
+	 * means every present field is known.
+	 */
+	availability?: Partial<Record<keyof MeetingState, boolean>>;
 };

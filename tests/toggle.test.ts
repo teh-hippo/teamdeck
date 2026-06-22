@@ -49,3 +49,25 @@ test("isActionable gates on connected, in a meeting, and the permission", () => 
 	assert.equal(isActionable({ ...base, state: {} }, "canReact"), false);
 	assert.equal(isActionable({ ...base, permissions: {} }, "canReact"), false);
 });
+
+test("selectImage renders disabled when the field is unavailable (never fakes unknown state)", () => {
+	// Hand via the UIA helper: actionable (canToggleHand true) but state unknown (availability false).
+	const handUnknown: TeamsSnapshot = {
+		connected: true,
+		paired: true,
+		state: { isInMeeting: true, isHandRaised: undefined },
+		permissions: { canToggleHand: true },
+		availability: { isInMeeting: true, isHandRaised: false },
+	};
+	assert.equal(selectImage(HAND, handUnknown), HAND.images.disabled, "unknown state must not render whenFalse");
+
+	// When the field IS known, the real state still renders even with an availability map present.
+	const handRaisedKnown: TeamsSnapshot = {
+		connected: true,
+		paired: true,
+		state: { isInMeeting: true, isHandRaised: true },
+		permissions: { canToggleHand: true },
+		availability: { isInMeeting: true, isHandRaised: true },
+	};
+	assert.equal(selectImage(HAND, handRaisedKnown), HAND.images.whenTrue);
+});

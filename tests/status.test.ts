@@ -56,3 +56,24 @@ test("empty state uses Boolean(undefined) for unavailable or off", () => {
 	assert.equal(selectStatusImage(SHARING, empty), SHARING.images.unavailable);
 	assert.equal(selectStatusImage(UNREAD, empty), UNREAD.images.unavailable);
 });
+
+test("availability=false renders unavailable even in a meeting (never fakes unknown state)", () => {
+	const inMeetingUnknownRecording: TeamsSnapshot = {
+		connected: true,
+		paired: true,
+		state: { isInMeeting: true, isRecordingOn: undefined },
+		permissions: {},
+		availability: { isInMeeting: true, isRecordingOn: false },
+	};
+	assert.equal(selectStatusImage(RECORDING, inMeetingUnknownRecording), RECORDING.images.unavailable);
+
+	// When the field IS known (availability true), it renders the real state.
+	const knownNotRecording: TeamsSnapshot = {
+		connected: true,
+		paired: true,
+		state: { isInMeeting: true, isRecordingOn: false },
+		permissions: {},
+		availability: { isInMeeting: true, isRecordingOn: true },
+	};
+	assert.equal(selectStatusImage(RECORDING, knownNotRecording), RECORDING.images.off);
+});
