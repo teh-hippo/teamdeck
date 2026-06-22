@@ -70,7 +70,7 @@ test("fixture replay reproduces the captured state and permissions", () => {
 	const fixtures = readdirSync(progressDir)
 		.filter((f) => f.startsWith("probe-observe-") && f.endsWith(".json"))
 		.map((f) => JSON.parse(readFileSync(join(progressDir, f), "utf8")))
-		.filter((d) => d.messages.some((m) => m.payload?.meetingUpdate?.meetingState));
+		.filter((d) => d.messages.some((m: { payload?: { meetingUpdate?: { meetingState?: unknown } } }) => m.payload?.meetingUpdate?.meetingState));
 	assert.ok(fixtures.length > 0, "at least one captured fixture with meetingState exists");
 
 	for (const fixture of fixtures) {
