@@ -68,27 +68,6 @@
 			]
 		},
 		{
-			"Name": "Background Blur",
-			"UUID": "io.github.teh-hippo.teamdeck.blur",
-			"Icon": "imgs/actions/blur/icon",
-			"Tooltip": "Toggle background blur in Microsoft Teams.",
-			"Controllers": [
-				"Keypad"
-			],
-			"States": [
-				{
-					"Image": "imgs/actions/blur/off",
-					"Name": "Off",
-					"TitleAlignment": "middle"
-				},
-				{
-					"Image": "imgs/actions/blur/on",
-					"Name": "On",
-					"TitleAlignment": "middle"
-				}
-			]
-		},
-		{
 			"Name": "Leave",
 			"UUID": "io.github.teh-hippo.teamdeck.leave",
 			"Icon": "imgs/actions/leave/icon",

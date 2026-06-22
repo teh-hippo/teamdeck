@@ -3,7 +3,7 @@ import streamDeck from "@elgato/streamdeck";
 import { Leave } from "./actions/leave";
 import { Applause, Laugh, Like, Love, Surprised } from "./actions/reactions";
 import { InMeeting, Recording, Sharing, Unread } from "./actions/status-tiles";
-import { Blur, Camera, Hand, Mute } from "./actions/toggles";
+import { Camera, Hand, Mute } from "./actions/toggles";
 import { teams } from "./teams/client";
 import { registerPropertyInspector } from "./ui";
 
@@ -14,7 +14,6 @@ streamDeck.logger.setLevel("info");
 streamDeck.actions.registerAction(new Mute());
 streamDeck.actions.registerAction(new Camera());
 streamDeck.actions.registerAction(new Hand());
-streamDeck.actions.registerAction(new Blur());
 streamDeck.actions.registerAction(new Leave());
 streamDeck.actions.registerAction(new Applause());
 streamDeck.actions.registerAction(new Laugh());
