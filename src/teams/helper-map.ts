@@ -22,7 +22,6 @@ export type HelperSnapshot = {
 /** The snapshot used when the helper is not running. */
 export const HELPER_DISCONNECTED: TeamsSnapshot = {
 	connected: false,
-	paired: false,
 	state: {},
 	permissions: {},
 	availability: {},
@@ -83,5 +82,5 @@ export function mapHelperSnapshot(h: HelperSnapshot): TeamsSnapshot {
 		hasUnreadMessages: s.unread.available,
 	};
 
-	return { connected: h.teamsRunning, paired: true, state, permissions, availability };
+	return { connected: h.teamsRunning, state, permissions, availability };
 }

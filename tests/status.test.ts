@@ -11,8 +11,8 @@ const specs: Array<{ name: string; spec: StatusSpec }> = [
 	{ name: "In Meeting", spec: IN_MEETING },
 ];
 
-function snapshot(state: Partial<MeetingState>, connected = true, paired = true): TeamsSnapshot {
-	return { connected, paired, state, permissions: {} };
+function snapshot(state: Partial<MeetingState>, connected = true): TeamsSnapshot {
+	return { connected, state, permissions: {} };
 }
 
 function meetingState(spec: StatusSpec, value: boolean): Partial<MeetingState> {
@@ -28,11 +28,7 @@ for (const { name, spec } of specs) {
 	});
 
 	test(`selectStatusImage(${name}) is unavailable when disconnected`, () => {
-		assert.equal(selectStatusImage(spec, snapshot(meetingState(spec, true), false, true)), spec.images.unavailable);
-	});
-
-	test(`selectStatusImage(${name}) is unavailable when unpaired`, () => {
-		assert.equal(selectStatusImage(spec, snapshot(meetingState(spec, true), true, false)), spec.images.unavailable);
+		assert.equal(selectStatusImage(spec, snapshot(meetingState(spec, true), false)), spec.images.unavailable);
 	});
 }
 
@@ -60,7 +56,6 @@ test("empty state uses Boolean(undefined) for unavailable or off", () => {
 test("availability=false renders unavailable even in a meeting (never fakes unknown state)", () => {
 	const inMeetingUnknownRecording: TeamsSnapshot = {
 		connected: true,
-		paired: true,
 		state: { isInMeeting: true, isRecordingOn: undefined },
 		permissions: {},
 		availability: { isInMeeting: true, isRecordingOn: false },
@@ -70,7 +65,6 @@ test("availability=false renders unavailable even in a meeting (never fakes unkn
 	// When the field IS known (availability true), it renders the real state.
 	const knownNotRecording: TeamsSnapshot = {
 		connected: true,
-		paired: true,
 		state: { isInMeeting: true, isRecordingOn: false },
 		permissions: {},
 		availability: { isInMeeting: true, isRecordingOn: true },

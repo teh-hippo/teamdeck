@@ -9,7 +9,7 @@ export type StatusSpec = {
 };
 
 export function selectStatusImage(spec: StatusSpec, snapshot: TeamsSnapshot): string {
-	if (!snapshot.connected || !snapshot.paired) {
+	if (!snapshot.connected) {
 		return spec.images.unavailable;
 	}
 	if (spec.requiresMeeting && !Boolean(snapshot.state.isInMeeting)) {

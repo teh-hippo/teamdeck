@@ -33,13 +33,12 @@ export type Listener = (snapshot: TeamsSnapshot) => void;
 /** Snapshot of the Teams connection broadcast to subscribers. */
 export type TeamsSnapshot = {
 	connected: boolean;
-	paired: boolean;
 	state: Partial<MeetingState>;
 	permissions: Partial<MeetingPermissions>;
 	/**
 	 * Per-field knowledge map. When a field is explicitly `false`, its value is unknown and keys
-	 * must render "unavailable" rather than a (possibly wrong) on/off state. Absent (legacy source)
-	 * means every present field is known.
+	 * must render "unavailable" rather than a (possibly wrong) on/off state. An absent entry means
+	 * the present field value is known.
 	 */
 	availability?: Partial<Record<keyof MeetingState, boolean>>;
 };

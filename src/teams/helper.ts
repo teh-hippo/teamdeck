@@ -28,6 +28,11 @@ export class HelperClient {
 		return this.#snapshot;
 	}
 
+	/** Whether the helper child process is currently running (surfaced to the property inspector). */
+	get running(): boolean {
+		return this.#proc !== undefined && !this.#stopped;
+	}
+
 	subscribe(listener: Listener): () => void {
 		this.#listeners.add(listener);
 		listener(this.#snapshot);
@@ -66,10 +71,6 @@ export class HelperClient {
 		if (!this.#proc && !this.#stopped) {
 			this.#spawn();
 		}
-	}
-
-	repair(): void {
-		// No pairing concept for the UIA helper.
 	}
 
 	isActionable(permission: keyof MeetingPermissions): boolean {

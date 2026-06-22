@@ -27,7 +27,6 @@ function helperSnap(overrides: Partial<HelperSnapshot> = {}): HelperSnapshot {
 test("maps mute/camera/sharing values and in-meeting", () => {
 	const s = mapHelperSnapshot(helperSnap());
 	assert.equal(s.connected, true);
-	assert.equal(s.paired, true);
 	assert.equal(s.state.isInMeeting, true);
 	assert.equal(s.state.isMuted, false, "value false => unmuted");
 	assert.equal(s.state.isVideoOn, true);
