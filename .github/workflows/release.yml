@@ -38,6 +38,13 @@ jobs:
           fi
       - name: Pack the plugin (builds and bundles the helper)
         run: npm run pack -- --output dist --version "${{ steps.version.outputs.value }}" --no-update-check --force
+      - name: Smoke-test the bundled helper (one snapshot, exit 0)
+        shell: pwsh
+        run: |
+          $out = & io.github.teh-hippo.teamdeck.sdPlugin/bin/teamdeck-helper.exe
+          if ($LASTEXITCODE -ne 0) { throw "helper exited with $LASTEXITCODE" }
+          if ($null -eq ($out | ConvertFrom-Json).schema) { throw "helper did not emit a snapshot" }
+          Write-Host "helper smoke ok"
       - name: Verify the packaged plugin contains the helper
         shell: pwsh
         run: |
@@ -46,7 +53,7 @@ jobs:
           Add-Type -AssemblyName System.IO.Compression.FileSystem
           $zip = [System.IO.Compression.ZipFile]::OpenRead($pkg.FullName)
           try {
-            $entry = $zip.Entries | Where-Object { $_.FullName -like "*bin/teamdeck-helper.exe" }
+            $entry = $zip.Entries | Where-Object { $_.FullName -like "*/bin/teamdeck-helper.exe" }
             if (-not $entry) { throw "packaged plugin is missing bin/teamdeck-helper.exe" }
             if ($entry.Length -le 0) { throw "the bundled helper is empty" }
             Write-Host "packaged helper ok: $($entry.FullName) ($($entry.Length) bytes)"
