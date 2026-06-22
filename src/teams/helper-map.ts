@@ -65,10 +65,6 @@ export function mapHelperSnapshot(h: HelperSnapshot): TeamsSnapshot {
 		canToggleBlur: false,
 		canLeave: inMeeting,
 		canReact: inMeeting,
-		canToggleShareTray: inMeeting,
-		canToggleChat: inMeeting,
-		canStopSharing: inMeeting && s.sharing.value === true,
-		canPair: false,
 	};
 
 	const availability: Partial<Record<keyof MeetingState, boolean>> = {
