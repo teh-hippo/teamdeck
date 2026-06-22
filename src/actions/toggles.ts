@@ -22,7 +22,11 @@ export class Mute extends MeetingKeyAction {
 @action({ UUID: "io.github.teh-hippo.teamdeck.camera" })
 export class Camera extends MeetingKeyAction {
 	constructor() {
-		super({ permission: CAMERA.permission, command: () => teams.toggleVideo(), imageFor: (s) => selectImage(CAMERA, s) });
+		super({
+			permission: CAMERA.permission,
+			command: () => teams.toggleVideo(),
+			imageFor: (s) => selectImage(CAMERA, s),
+		});
 	}
 }
 

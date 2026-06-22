@@ -1,7 +1,16 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { BLUR, CAMERA, HAND, isActionable, MUTE, REACTIONS, selectImage, type ToggleSpec } from "../src/actions/toggle.ts";
+import {
+	BLUR,
+	CAMERA,
+	HAND,
+	isActionable,
+	MUTE,
+	REACTIONS,
+	selectImage,
+	type ToggleSpec,
+} from "../src/actions/toggle.ts";
 import type { TeamsSnapshot } from "../src/teams/types.ts";
 
 function snap(state: Record<string, boolean>, permission: string): TeamsSnapshot {

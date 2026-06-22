@@ -16,9 +16,7 @@ function snapshot(state: Partial<MeetingState>, connected = true): TeamsSnapshot
 }
 
 function meetingState(spec: StatusSpec, value: boolean): Partial<MeetingState> {
-	return spec.stateField === "isInMeeting"
-		? { isInMeeting: value }
-		: { isInMeeting: true, [spec.stateField]: value };
+	return spec.stateField === "isInMeeting" ? { isInMeeting: value } : { isInMeeting: true, [spec.stateField]: value };
 }
 
 for (const { name, spec } of specs) {
