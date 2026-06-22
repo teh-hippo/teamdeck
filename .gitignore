@@ -22,3 +22,6 @@ agent/progress/probe-token.json
 # OS
 .DS_Store
 Thumbs.db
+
+# Throwaway research/spike scratch (never committed)
+/spikes/
