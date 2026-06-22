@@ -48,7 +48,6 @@ test("synthesizes permissions from availability and meeting (B1)", () => {
 	assert.equal(s.permissions.canToggleHand, true, "hand is control-only but actionable in a meeting");
 	assert.equal(s.permissions.canLeave, true);
 	assert.equal(s.permissions.canReact, true);
-	assert.equal(s.permissions.canToggleBlur, false, "blur control not implemented via UIA");
 });
 
 test("unknown signals are undefined and marked unavailable (B2 - never fake state)", () => {

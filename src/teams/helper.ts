@@ -90,10 +90,6 @@ export class HelperClient {
 		this.#send("raise-hand");
 	}
 
-	toggleBlur(): void {
-		// Background blur control via UIA is not implemented (menu navigation is intrusive); Phase A.
-	}
-
 	leave(): void {
 		this.#send("leave");
 	}

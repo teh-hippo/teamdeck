@@ -1,16 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import {
-	BLUR,
-	CAMERA,
-	HAND,
-	isActionable,
-	MUTE,
-	REACTIONS,
-	selectImage,
-	type ToggleSpec,
-} from "../src/actions/toggle.ts";
+import { CAMERA, HAND, isActionable, MUTE, REACTIONS, selectImage, type ToggleSpec } from "../src/actions/toggle.ts";
 import type { TeamsSnapshot } from "../src/teams/types.ts";
 
 function snap(state: Record<string, boolean>, permission: string): TeamsSnapshot {
@@ -21,7 +12,6 @@ const cases: Array<{ name: string; spec: ToggleSpec; whenTrue: Record<string, bo
 	{ name: "Mute", spec: MUTE, whenTrue: { isMuted: true } },
 	{ name: "Camera", spec: CAMERA, whenTrue: { isVideoOn: true } },
 	{ name: "Hand", spec: HAND, whenTrue: { isHandRaised: true } },
-	{ name: "Blur", spec: BLUR, whenTrue: { isBackgroundBlurred: true } },
 ];
 
 for (const { name, spec, whenTrue } of cases) {

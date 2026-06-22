@@ -52,7 +52,6 @@ export function mapHelperSnapshot(h: HelperSnapshot): TeamsSnapshot {
 		isHandRaised: known(s.hand),
 		isSharing: known(s.sharing),
 		isRecordingOn: known(s.recording),
-		isBackgroundBlurred: undefined,
 		hasUnreadMessages: known(s.unread),
 	};
 
@@ -62,7 +61,6 @@ export function mapHelperSnapshot(h: HelperSnapshot): TeamsSnapshot {
 		canToggleMute: inMeeting && s.mute.available,
 		canToggleVideo: inMeeting && s.camera.available,
 		canToggleHand: inMeeting,
-		canToggleBlur: false,
 		canLeave: inMeeting,
 		canReact: inMeeting,
 	};
@@ -74,7 +72,6 @@ export function mapHelperSnapshot(h: HelperSnapshot): TeamsSnapshot {
 		isHandRaised: s.hand.available,
 		isSharing: s.sharing.available,
 		isRecordingOn: s.recording.available,
-		isBackgroundBlurred: false,
 		hasUnreadMessages: s.unread.available,
 	};
 

@@ -5,7 +5,6 @@ export type MeetingState = {
 	isHandRaised: boolean;
 	isInMeeting: boolean;
 	isRecordingOn: boolean;
-	isBackgroundBlurred: boolean;
 	isSharing: boolean;
 	hasUnreadMessages: boolean;
 };
@@ -15,7 +14,6 @@ export type MeetingPermissions = {
 	canToggleMute: boolean;
 	canToggleVideo: boolean;
 	canToggleHand: boolean;
-	canToggleBlur: boolean;
 	canLeave: boolean;
 	canReact: boolean;
 };

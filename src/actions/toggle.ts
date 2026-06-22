@@ -64,17 +64,6 @@ export const HAND: ToggleSpec = {
 	},
 };
 
-/** Background Blur: blurred (isBackgroundBlurred) shows green, unblurred shows red. */
-export const BLUR: ToggleSpec = {
-	permission: "canToggleBlur",
-	stateField: "isBackgroundBlurred",
-	images: {
-		whenTrue: "imgs/actions/blur/on",
-		whenFalse: "imgs/actions/blur/off",
-		disabled: "imgs/actions/blur/disabled",
-	},
-};
-
 /** The five Teams reactions: action key → wire type (verified live) and icon name. */
 export const REACTIONS = {
 	applause: { type: "applause", image: "applause" },
