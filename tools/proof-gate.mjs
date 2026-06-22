@@ -8,6 +8,7 @@ const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url),
 
 const steps = [
 	["typecheck", "npm run typecheck"],
+	["lint", "npm run lint"],
 	["build", "npm run build"],
 	["validate", "npm run validate"],
 	["check-icons", "npm run check-icons"],
