@@ -1,4 +1,4 @@
-// Pre-commit secret scan. Blocks commits that stage a Teams pairing token.
+// Pre-commit secret scan. Blocks commits that stage a token-like secret.
 //
 // High-signal: flags a token-like UUID that appears right after a token keyword or as a
 // token= URL parameter. Redacted forms (<redacted:N>) are always allowed. Install as a

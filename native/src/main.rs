@@ -1,8 +1,7 @@
-//! TeamDeck native helper (SPIKE skeleton).
+//! TeamDeck native helper.
 //!
-//! Emits the TeamsSnapshot contract as one JSON object per line on stdout. The UIA reads are
-//! wired in once the MSVC toolchain is available (see TODO in `main`). Contract mirrors
-//! `spikes/readmodel/Get-TeamsSnapshot.ps1`.
+//! Reads Microsoft Teams meeting state via Windows UI Automation and actuates the meeting controls.
+//! Emits the snapshot contract as one JSON object per line on stdout; see `agent/specs/helper.md`.
 
 use serde::Serialize;
 use std::io::{BufRead, Write};

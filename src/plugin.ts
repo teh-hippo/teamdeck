@@ -7,8 +7,8 @@ import { InMeeting, Recording, Sharing, Unread } from "./actions/status-tiles";
 import { teams } from "./teams/client";
 import { registerPropertyInspector } from "./ui";
 
-// Avoid trace logging: it records all messages between Stream Deck and the plugin, which would
-// include the pairing token held in global settings.
+// Keep the log level off "trace": it records every message between Stream Deck and the plugin and
+// is far noisier than normal operation needs.
 streamDeck.logger.setLevel("info");
 
 streamDeck.actions.registerAction(new Mute());
