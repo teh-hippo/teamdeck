@@ -8,9 +8,9 @@ use std::io::{BufRead, Write};
 use std::sync::mpsc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use uiautomation::patterns::{UIExpandCollapsePattern, UIInvokePattern};
 use uiautomation::types::{TreeScope, UIProperty};
 use uiautomation::variants::Variant;
-use uiautomation::patterns::{UIExpandCollapsePattern, UIInvokePattern};
 use uiautomation::{UIAutomation, UIElement};
 
 use windows::Win32::Foundation::HWND;
@@ -28,7 +28,11 @@ struct Signal {
 
 impl Signal {
     fn unknown() -> Self {
-        Signal { value: None, available: false, source: "none".into() }
+        Signal {
+            value: None,
+            available: false,
+            source: "none".into(),
+        }
     }
 }
 
@@ -61,11 +65,18 @@ struct Snapshot {
 }
 
 fn now_ms() -> u128 {
-    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis()
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis()
 }
 
 fn known(value: bool, source: &str) -> Signal {
-    Signal { value: Some(value), available: true, source: source.into() }
+    Signal {
+        value: Some(value),
+        available: true,
+        source: source.into(),
+    }
 }
 
 /// microphone-button Name is the action verb: "Unmute mic" => muted, "Mute mic" => unmuted.
@@ -116,7 +127,11 @@ fn build_snapshot(automation: &UIAutomation) -> Snapshot {
         signals: Signals {
             mute: Signal::unknown(),
             camera: Signal::unknown(),
-            hand: Signal { value: None, available: false, source: "flyout-only".into() },
+            hand: Signal {
+                value: None,
+                available: false,
+                source: "flyout-only".into(),
+            },
             sharing: Signal::unknown(),
             recording: Signal::unknown(),
             unread: Signal::unknown(),
@@ -148,7 +163,10 @@ fn build_snapshot(automation: &UIAutomation) -> Snapshot {
                 meeting = Some(w.clone());
             }
         }
-        if w.get_name().unwrap_or_default().starts_with("Sharing control bar") {
+        if w.get_name()
+            .unwrap_or_default()
+            .starts_with("Sharing control bar")
+        {
             sharing = true;
         }
     }
@@ -157,19 +175,27 @@ fn build_snapshot(automation: &UIAutomation) -> Snapshot {
         // Selection required microphone-button AND hangup-button, so this is an active meeting.
         snap.in_meeting = true;
         snap.window = Some(WindowInfo {
-            pid: m.get_process_id().unwrap_or(0) as u32,
+            pid: m.get_process_id().unwrap_or(0),
             name: m.get_name().unwrap_or_default(),
         });
         if let Some(n) = name_by_id(automation, &m, "microphone-button") {
             snap.signals.mute = match map_mute(&n) {
                 Some(v) => known(v, "uia-label"),
-                None => Signal { value: None, available: false, source: format!("uia-label?:{n}") },
+                None => Signal {
+                    value: None,
+                    available: false,
+                    source: format!("uia-label?:{n}"),
+                },
             };
         }
         if let Some(n) = name_by_id(automation, &m, "video-button") {
             snap.signals.camera = match map_camera(&n) {
                 Some(v) => known(v, "uia-label"),
-                None => Signal { value: None, available: false, source: format!("uia-label?:{n}") },
+                None => Signal {
+                    value: None,
+                    available: false,
+                    source: format!("uia-label?:{n}"),
+                },
             };
         }
         // hand: under the React flyout — not passively readable (left flyout-only/unknown).
@@ -207,7 +233,9 @@ fn invoke_element(el: &UIElement) -> bool {
 }
 
 fn invoke_id(automation: &UIAutomation, parent: &UIElement, aid: &str) -> bool {
-    find_first_id(automation, parent, aid).map(|el| invoke_element(&el)).unwrap_or(false)
+    find_first_id(automation, parent, aid)
+        .map(|el| invoke_element(&el))
+        .unwrap_or(false)
 }
 
 /// Opens the React flyout, triggers an item (raise-hand or a reaction), then collapses it.
@@ -364,7 +392,10 @@ fn main() {
         let verb = args.get(2).map(|s| s.as_str()).unwrap_or("");
         let arg = args.get(3).map(|s| s.as_str());
         let ok = do_command(&automation, verb, arg);
-        println!("{}", serde_json::json!({ "cmd": verb, "arg": arg, "ok": ok }));
+        println!(
+            "{}",
+            serde_json::json!({ "cmd": verb, "arg": arg, "ok": ok })
+        );
         std::process::exit(if ok { 0 } else { 1 });
     }
 
