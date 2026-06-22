@@ -18,10 +18,6 @@ export type MeetingPermissions = {
 	canToggleBlur: boolean;
 	canLeave: boolean;
 	canReact: boolean;
-	canToggleShareTray: boolean;
-	canToggleChat: boolean;
-	canStopSharing: boolean;
-	canPair: boolean;
 };
 
 /** Reaction types accepted by the `send-reaction` command. */

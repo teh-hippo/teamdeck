@@ -33,13 +33,12 @@ test("maps mute/camera/sharing values and in-meeting", () => {
 	assert.equal(s.state.isSharing, false);
 });
 
-test("muted maps to isMuted true; canStopSharing follows sharing", () => {
+test("muted maps to isMuted true; sharing maps to isSharing", () => {
 	const s = mapHelperSnapshot(
 		helperSnap({ signals: { ...helperSnap().signals, mute: sig(true), sharing: sig(true, true, "uia-window") } }),
 	);
 	assert.equal(s.state.isMuted, true);
 	assert.equal(s.state.isSharing, true);
-	assert.equal(s.permissions.canStopSharing, true);
 });
 
 test("synthesizes permissions from availability and meeting (B1)", () => {
@@ -50,7 +49,6 @@ test("synthesizes permissions from availability and meeting (B1)", () => {
 	assert.equal(s.permissions.canLeave, true);
 	assert.equal(s.permissions.canReact, true);
 	assert.equal(s.permissions.canToggleBlur, false, "blur control not implemented via UIA");
-	assert.equal(s.permissions.canPair, false);
 });
 
 test("unknown signals are undefined and marked unavailable (B2 - never fake state)", () => {
