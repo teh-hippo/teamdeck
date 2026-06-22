@@ -20,3 +20,25 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run proof
+
+  helper:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: native
+      - name: Build and bundle the native helper
+        run: npm run build:helper
+      - name: Smoke-test the helper (one snapshot, exit 0)
+        shell: pwsh
+        run: |
+          $out = & io.github.teh-hippo.teamdeck.sdPlugin/bin/teamdeck-helper.exe
+          if ($LASTEXITCODE -ne 0) { throw "helper exited with $LASTEXITCODE" }
+          $snap = $out | ConvertFrom-Json
+          if ($null -eq $snap.schema) { throw "helper did not emit a snapshot" }
+          Write-Host "helper smoke ok: schema=$($snap.schema) teamsRunning=$($snap.teamsRunning)"
