@@ -8,7 +8,7 @@ import {
 
 import { teams } from "../teams/client";
 import type { MeetingPermissions, TeamsSnapshot } from "../teams/types";
-import { selectStatusImage, type StatusSpec } from "./status";
+import { type StatusSpec, selectStatusImage } from "./status";
 
 /** Selects the key image to render for a given Teams snapshot. */
 export type ImageFor = (snapshot: TeamsSnapshot) => string;

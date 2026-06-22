@@ -1,7 +1,6 @@
 import { action } from "@elgato/streamdeck";
-
-import { IN_MEETING, RECORDING, SHARING, UNREAD } from "./status";
 import { StatusAction } from "./key-action";
+import { IN_MEETING, RECORDING, SHARING, UNREAD } from "./status";
 
 /** Mirrors whether the current Microsoft Teams meeting is recording. */
 @action({ UUID: "io.github.teh-hippo.teamdeck.recording" })

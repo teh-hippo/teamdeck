@@ -12,14 +12,14 @@ export function selectStatusImage(spec: StatusSpec, snapshot: TeamsSnapshot): st
 	if (!snapshot.connected) {
 		return spec.images.unavailable;
 	}
-	if (spec.requiresMeeting && !Boolean(snapshot.state.isInMeeting)) {
+	if (spec.requiresMeeting && !snapshot.state.isInMeeting) {
 		return spec.images.unavailable;
 	}
 	// Unknown (e.g. recording/unread when read via UIA) must never render a fake on/off state.
 	if (snapshot.availability && snapshot.availability[spec.stateField] === false) {
 		return spec.images.unavailable;
 	}
-	return Boolean(snapshot.state[spec.stateField]) ? spec.images.on : spec.images.off;
+	return snapshot.state[spec.stateField] ? spec.images.on : spec.images.off;
 }
 
 export const RECORDING: StatusSpec = {
