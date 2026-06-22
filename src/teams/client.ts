@@ -1,269 +1,115 @@
-import streamDeck from "@elgato/streamdeck";
+import { HelperClient } from "./helper";
+import { LegacyClient } from "./legacy";
+import type { Listener, TeamsSource } from "./source";
+import type { MeetingPermissions, ReactionType, TeamsSnapshot } from "./types";
 
-import identity from "../../shared/identity.json";
-import { actionable, buildUrl, mergePermissions, mergeState, pairingDecision, parseMessage, toggleBlurState } from "./protocol";
-import type { MeetingPermissions, MeetingState, ReactionType, TeamsSnapshot } from "./types";
-
-const MAX_RECONNECT_DELAY = 30_000;
-
-type GlobalSettings = { teamsToken?: string };
-type Listener = (snapshot: TeamsSnapshot) => void;
+const HELPER_START_DELAY = 4_000;
 
 /**
- * Single shared connection to the Microsoft Teams third-party app API.
+ * Fuses the legacy third-party-API client with the UI-Automation helper.
  *
- * Owns pairing, token persistence (in Stream Deck global settings), reconnection with backoff,
- * and the cached meeting state, broadcasting snapshots to subscribed actions. The protocol it
- * speaks is documented and empirically verified in `agent/specs/protocol.md`.
+ * The legacy API is preferred while connected (richer, lower-latency, non-intrusive). When it is
+ * unavailable — after the 30 June 2026 retirement, or when the user has not enabled it — the helper
+ * takes over automatically. The helper only runs while the legacy API is down, to avoid the UIA
+ * polling cost when it is not needed. Actions and the property inspector talk only to this facade.
  */
-class TeamsClient {
-	#ws?: WebSocket;
-	#abort?: AbortController;
-	#token?: string;
-	#pairing = false;
-	#requestId = 0;
-	#reconnectDelay = 1_000;
-	#reconnectTimer?: ReturnType<typeof setTimeout>;
-	#started = false;
-	#connected = false;
-	#state: Partial<MeetingState> = {};
-	#permissions: Partial<MeetingPermissions> = {};
+class TeamsFacade implements TeamsSource {
+	readonly #legacy = new LegacyClient();
+	readonly #helper = new HelperClient();
 	readonly #listeners = new Set<Listener>();
+	#helperStartTimer?: ReturnType<typeof setTimeout>;
+	#started = false;
 
-	/** Current snapshot of connection, pairing and meeting state. */
+	/** The snapshot of whichever source is currently active. */
 	get snapshot(): TeamsSnapshot {
-		return {
-			connected: this.#connected,
-			paired: Boolean(this.#token),
-			state: { ...this.#state },
-			permissions: { ...this.#permissions },
-		};
+		return this.#active().snapshot;
 	}
 
-	/** Subscribes to snapshot updates; immediately replays the current snapshot. */
+	/** The legacy API is the active source only when connected AND paired (i.e. fully working). */
+	#legacyActive(): boolean {
+		return this.#legacy.snapshot.connected && this.#legacy.snapshot.paired;
+	}
+
+	#active(): TeamsSource {
+		return this.#legacyActive() ? this.#legacy : this.#helper;
+	}
+
 	subscribe(listener: Listener): () => void {
 		this.#listeners.add(listener);
 		listener(this.snapshot);
 		return () => this.#listeners.delete(listener);
 	}
 
-	/** Loads any persisted token and opens the connection. Safe to call more than once. */
 	async start(): Promise<void> {
 		if (this.#started) {
 			return;
 		}
 		this.#started = true;
-		const settings = await streamDeck.settings.getGlobalSettings<GlobalSettings>();
-		this.#token = settings.teamsToken || undefined;
-		this.#connect();
+		this.#legacy.subscribe(() => {
+			this.#manageHelper();
+			this.#emit();
+		});
+		this.#helper.subscribe(() => this.#emit());
+		await this.#legacy.start();
 	}
 
-	/** Recovers a stuck connection or re-triggers a missed pairing prompt; no-op when healthy. */
-	recover(): void {
-		if (!this.#connected || (!this.#token && this.#permissions.canPair === true)) {
-			this.#connect();
+	/** Stops the helper child process; call on plugin shutdown to avoid orphaned UIA pollers. */
+	stop(): void {
+		clearTimeout(this.#helperStartTimer);
+		this.#helperStartTimer = undefined;
+		this.#helper.stop();
+	}
+
+	/** Runs the helper only while the legacy API is not active (debounced to avoid thrashing). */
+	#manageHelper(): void {
+		if (this.#legacyActive()) {
+			clearTimeout(this.#helperStartTimer);
+			this.#helperStartTimer = undefined;
+			this.#helper.stop();
+		} else if (this.#helperStartTimer === undefined) {
+			this.#helperStartTimer = setTimeout(() => {
+				this.#helperStartTimer = undefined;
+				if (!this.#legacyActive()) {
+					this.#helper.start();
+				}
+			}, HELPER_START_DELAY);
 		}
 	}
 
-	/** Forgets the stored token and re-pairs. Used by the property inspector's re-pair button. */
-	repair(): void {
-		this.#dropTokenAndRepair();
-	}
-
-	/** Whether a command gated by the given permission can be sent right now. */
 	isActionable(permission: keyof MeetingPermissions): boolean {
-		return actionable(this.snapshot, permission);
+		return this.#active().isActionable(permission);
 	}
 
 	toggleMute(): void {
-		this.#send("toggle-mute");
+		this.#active().toggleMute();
 	}
 
 	toggleVideo(): void {
-		this.#send("toggle-video");
+		this.#active().toggleVideo();
 	}
 
 	toggleHand(): void {
-		this.#send("toggle-hand");
+		this.#active().toggleHand();
 	}
 
 	toggleBlur(): void {
-		// Teams does not echo blur, so once the command is actually sent, optimistically flip the
-		// cached value and emit so the key reflects it. A later full snapshot reconciles the truth.
-		if (this.#send("toggle-background-blur") && this.#state.isInMeeting) {
-			this.#state = toggleBlurState(this.#state);
-			this.#emit();
-		}
+		this.#active().toggleBlur();
 	}
 
 	leave(): void {
-		this.#send("leave-call");
+		this.#active().leave();
 	}
 
 	react(type: ReactionType): void {
-		this.#send("send-reaction", { type });
+		this.#active().react(type);
 	}
 
-	#url(): string {
-		return buildUrl(identity, this.#token);
+	recover(): void {
+		this.#active().recover();
 	}
 
-	#connect(): void {
-		clearTimeout(this.#reconnectTimer);
-		// Tear down any previous socket and its listeners so two never run at once; the protocol
-		// notes warn that concurrent same-identity sockets can revoke the token.
-		this.#abort?.abort();
-		try {
-			this.#ws?.close();
-		} catch {
-			// ignore
-		}
-		// Reset connection state here. On a manual reconnect the abort above suppresses the old
-		// socket's close handler, so clear the caches now to avoid emitting a stale, actionable
-		// snapshot during the reconnect window.
-		this.#pairing = false;
-		this.#connected = false;
-		this.#state = {};
-		this.#permissions = {};
-		this.#emit();
-
-		const paired = Boolean(this.#token);
-		const abort = new AbortController();
-		this.#abort = abort;
-		const ws = new WebSocket(this.#url());
-		this.#ws = ws;
-
-		ws.addEventListener(
-			"open",
-			() => {
-				this.#connected = true;
-				this.#reconnectDelay = 1_000;
-				streamDeck.logger.info(`Teams connected (paired: ${paired}).`);
-				this.#emit();
-			},
-			{ signal: abort.signal },
-		);
-		ws.addEventListener(
-			"message",
-			(ev) => this.#onMessage(typeof ev.data === "string" ? ev.data : String(ev.data)),
-			{ signal: abort.signal },
-		);
-		ws.addEventListener(
-			"close",
-			() => {
-				this.#connected = false;
-				this.#state = {};
-				this.#permissions = {};
-				this.#emit();
-				streamDeck.logger.info("Teams connection closed; reconnecting.");
-				this.#scheduleReconnect();
-			},
-			{ signal: abort.signal },
-		);
-		ws.addEventListener(
-			"error",
-			() => {
-				// Some failures (e.g. connection refused) emit only `error`; ensure a retry.
-				if (!this.#connected) {
-					this.#scheduleReconnect();
-				}
-			},
-			{ signal: abort.signal },
-		);
-	}
-
-	#scheduleReconnect(): void {
-		clearTimeout(this.#reconnectTimer);
-		this.#reconnectTimer = setTimeout(() => this.#connect(), this.#reconnectDelay);
-		this.#reconnectDelay = Math.min(this.#reconnectDelay * 2, MAX_RECONNECT_DELAY);
-	}
-
-	#onMessage(raw: string): void {
-		const message = parseMessage(raw);
-		if (!message) {
-			return;
-		}
-
-		if (typeof message.tokenRefresh === "string") {
-			this.#onToken(message.tokenRefresh);
-			return;
-		}
-		if (message.errorMsg) {
-			streamDeck.logger.warn(`Teams error: ${message.errorMsg} (requestId=${message.requestId}).`);
-		}
-
-		const update = message.meetingUpdate;
-		if (!update) {
-			return;
-		}
-
-		// Observed messages are full snapshots; merge defensively in case a partial ever arrives.
-		// Out of a meeting Teams sends permissions only, so cached meetingState (isInMeeting, blur)
-		// can be stale until the next full snapshot; every key also gates on a permission, which
-		// goes false out of a meeting, so the stale state is never rendered.
-		this.#permissions = mergePermissions(this.#permissions, update.meetingPermissions);
-		this.#state = mergeState(this.#state, update.meetingState);
-
-		const canPair = update.meetingPermissions?.canPair;
-		if (canPair === false) {
-			// Allow a future pairing attempt, e.g. after the user dismissed the previous prompt.
-			this.#pairing = false;
-		}
-
-		switch (pairingDecision(Boolean(this.#token), canPair)) {
-			case "repair":
-				streamDeck.logger.warn("Teams token rejected; re-pairing.");
-				this.#dropTokenAndRepair();
-				return;
-			case "pair":
-				if (!this.#pairing) {
-					this.#pairing = true;
-					streamDeck.logger.info("Requesting Teams pairing; approve the prompt in Teams.");
-					this.#send("pair");
-				}
-				break;
-		}
-
-		this.#emit();
-	}
-
-	#onToken(token: string): void {
-		const firstPairing = !this.#token;
-		this.#token = token;
-		this.#pairing = false;
-		void streamDeck.settings.setGlobalSettings<GlobalSettings>({ teamsToken: token });
-		streamDeck.logger.info("Teams pairing token stored.");
-		if (firstPairing) {
-			// Close the tokenless socket; the close handler reconnects once, now with the token.
-			// Closing rather than calling #connect() directly avoids two briefly-concurrent sockets.
-			this.#closeForReconnect();
-		}
-	}
-
-	#dropTokenAndRepair(): void {
-		this.#token = undefined;
-		void streamDeck.settings.setGlobalSettings<GlobalSettings>({});
-		this.#closeForReconnect();
-	}
-
-	#closeForReconnect(): void {
-		try {
-			this.#ws?.close();
-		} catch {
-			// Ignore; the close handler schedules the single reconnect.
-		}
-	}
-
-	#send(action: string, parameters: Record<string, unknown> = {}): boolean {
-		if (!this.#ws || this.#ws.readyState !== WebSocket.OPEN) {
-			streamDeck.logger.warn(`Cannot send "${action}": Teams not connected.`);
-			if (!this.#connected) {
-				this.#connect();
-			}
-			return false;
-		}
-		this.#ws.send(JSON.stringify({ action, parameters, requestId: ++this.#requestId }));
-		return true;
+	repair(): void {
+		this.#active().repair();
 	}
 
 	#emit(): void {
@@ -274,5 +120,5 @@ class TeamsClient {
 	}
 }
 
-/** The shared Teams client instance for the plugin process. */
-export const teams = new TeamsClient();
+/** The shared Teams source for the plugin process (legacy third-party API + UIA helper). */
+export const teams = new TeamsFacade();

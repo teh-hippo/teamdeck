@@ -35,3 +35,16 @@ streamDeck
 		return teams.start();
 	})
 	.catch((error) => streamDeck.logger.error(`Startup failed: ${error}`));
+
+// Terminate the UIA helper child process on shutdown so it never outlives the plugin. (The helper
+// also exits on its own when its stdin/stdout pipe closes, which covers hard kills.)
+const shutdown = (): void => teams.stop();
+process.once("exit", shutdown);
+process.once("SIGINT", () => {
+	shutdown();
+	process.exit(0);
+});
+process.once("SIGTERM", () => {
+	shutdown();
+	process.exit(0);
+});
