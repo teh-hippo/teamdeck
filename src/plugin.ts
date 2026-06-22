@@ -26,8 +26,8 @@ streamDeck.actions.registerAction(new Sharing());
 streamDeck.actions.registerAction(new Unread());
 streamDeck.actions.registerAction(new InMeeting());
 
-// Register with Stream Deck first, then open the Teams connection so plugin registration is
-// never blocked by the external WebSocket.
+// Register with Stream Deck first, then start the Teams helper so plugin registration is never
+// blocked by spawning the helper child process.
 streamDeck
 	.connect()
 	.then(() => {

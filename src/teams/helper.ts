@@ -45,12 +45,12 @@ export class HelperClient {
 			return;
 		}
 		this.#stopped = false;
-		// Clear any snapshot from a previous run so a legacy flap never shows a dead helper's state.
+		// Clear any snapshot from a previous run so a restart never shows a dead helper's stale state.
 		this.#snapshot = HELPER_DISCONNECTED;
 		this.#spawn();
 	}
 
-	/** Stops the helper and prevents restart (used when the legacy API takes over). */
+	/** Stops the helper and prevents restart; call on plugin shutdown. */
 	stop(): void {
 		if (this.#stopped) {
 			return;
