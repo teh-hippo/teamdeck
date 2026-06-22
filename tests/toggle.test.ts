@@ -5,7 +5,7 @@ import { BLUR, CAMERA, HAND, isActionable, MUTE, REACTIONS, selectImage, type To
 import type { TeamsSnapshot } from "../src/teams/types.ts";
 
 function snap(state: Record<string, boolean>, permission: string): TeamsSnapshot {
-	return { connected: true, paired: true, state: { isInMeeting: true, ...state }, permissions: { [permission]: true } };
+	return { connected: true, state: { isInMeeting: true, ...state }, permissions: { [permission]: true } };
 }
 
 const cases: Array<{ name: string; spec: ToggleSpec; whenTrue: Record<string, boolean> }> = [
@@ -17,7 +17,7 @@ const cases: Array<{ name: string; spec: ToggleSpec; whenTrue: Record<string, bo
 
 for (const { name, spec, whenTrue } of cases) {
 	test(`selectImage(${name}) maps availability and state to images`, () => {
-		const disabled: TeamsSnapshot = { connected: true, paired: true, state: {}, permissions: {} };
+		const disabled: TeamsSnapshot = { connected: true, state: {}, permissions: {} };
 		assert.equal(selectImage(spec, disabled), spec.images.disabled, "disabled when not actionable");
 		assert.equal(selectImage(spec, snap(whenTrue, spec.permission)), spec.images.whenTrue, "whenTrue image");
 		assert.equal(selectImage(spec, snap({}, spec.permission)), spec.images.whenFalse, "whenFalse image");
@@ -40,7 +40,6 @@ test("reactions map to the verified wire types (Surprised => wow)", () => {
 test("isActionable gates on connected, in a meeting, and the permission", () => {
 	const base: TeamsSnapshot = {
 		connected: true,
-		paired: true,
 		state: { isInMeeting: true },
 		permissions: { canReact: true },
 	};
@@ -54,7 +53,6 @@ test("selectImage renders disabled when the field is unavailable (never fakes un
 	// Hand via the UIA helper: actionable (canToggleHand true) but state unknown (availability false).
 	const handUnknown: TeamsSnapshot = {
 		connected: true,
-		paired: true,
 		state: { isInMeeting: true, isHandRaised: undefined },
 		permissions: { canToggleHand: true },
 		availability: { isInMeeting: true, isHandRaised: false },
@@ -64,7 +62,6 @@ test("selectImage renders disabled when the field is unavailable (never fakes un
 	// When the field IS known, the real state still renders even with an availability map present.
 	const handRaisedKnown: TeamsSnapshot = {
 		connected: true,
-		paired: true,
 		state: { isInMeeting: true, isHandRaised: true },
 		permissions: { canToggleHand: true },
 		availability: { isInMeeting: true, isHandRaised: true },

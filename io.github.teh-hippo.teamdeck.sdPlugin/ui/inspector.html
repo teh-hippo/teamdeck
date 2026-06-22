@@ -27,36 +27,19 @@
 			.ok { background: #2ea043; }
 			.bad { background: #d13438; }
 			.warn { background: #e3a008; }
-			button {
-				background: #4a4a4a;
-				color: #fff;
-				border: 1px solid #666;
-				border-radius: 4px;
-				padding: 7px 12px;
-				cursor: pointer;
-			}
-			button:hover { background: #585858; }
 			.hint { color: #9a9a9a; margin-top: 12px; line-height: 1.5; }
 		</style>
 	</head>
 	<body>
 		<div class="status" id="status">Connecting&hellip;</div>
-		<button id="repair">Re-pair with Teams</button>
 		<div class="hint">
-			If a key stays grey while you are in a meeting, click Re-pair and approve the prompt in Teams.
+			Status tiles mirror your meeting without disturbing the active window. Pressing a control
+			key briefly brings Teams forward, then returns focus to where you were.
 		</div>
 		<script>
 			let ws;
-			let piContext;
-			let actionUuid;
 
 			function connectElgatoStreamDeckSocket(port, uuid, registerEvent, info, actionInfo) {
-				piContext = uuid;
-				try {
-					actionUuid = JSON.parse(actionInfo).action;
-				} catch (e) {
-					/* no action context */
-				}
 				ws = new WebSocket("ws://127.0.0.1:" + port);
 				ws.onopen = () => ws.send(JSON.stringify({ event: registerEvent, uuid }));
 				ws.onmessage = (e) => {
@@ -70,25 +53,13 @@
 			function render(p) {
 				if (!p) return;
 				const row = (cls, label) => '<span class="dot ' + cls + '"></span>' + label;
-				document.getElementById("status").innerHTML = [
-					row(p.connected ? "ok" : "bad", p.connected ? "Connected to Teams" : "Not connected"),
-					row(p.paired ? "ok" : "warn", p.paired ? "Paired" : "Not paired"),
-					row(p.inMeeting ? "ok" : "warn", p.inMeeting ? "In a meeting" : "Not in a meeting"),
-				].join("<br>");
+				let line;
+				if (!p.helperRunning) line = row("bad", "Helper not running");
+				else if (!p.teamsRunning) line = row("warn", "Teams not running");
+				else if (!p.inMeeting) line = row("warn", "Not in a meeting");
+				else line = row("ok", "In a meeting");
+				document.getElementById("status").innerHTML = line;
 			}
-
-			document.getElementById("repair").addEventListener("click", () => {
-				if (ws && actionUuid) {
-					ws.send(
-						JSON.stringify({
-							action: actionUuid,
-							event: "sendToPlugin",
-							context: piContext,
-							payload: { type: "repair" },
-						}),
-					);
-				}
-			});
 		</script>
 	</body>
 </html>
