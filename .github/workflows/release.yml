@@ -10,28 +10,60 @@ permissions:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
           cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: native
       - run: npm ci
       - run: npm run proof
       - name: Derive plugin version from tag
         id: version
+        shell: bash
         run: |
           TAG="${GITHUB_REF_NAME#v}"
           if [[ "$TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "value=${TAG}.0" >> "$GITHUB_OUTPUT"
-          else
+          elif [[ "$TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "value=${TAG}" >> "$GITHUB_OUTPUT"
+          else
+            echo "Tag '$GITHUB_REF_NAME' is not a numeric Stream Deck version (a.b.c or a.b.c.d)." >&2
+            exit 1
           fi
-      - name: Pack plugin
+      - name: Pack the plugin (builds and bundles the helper)
         run: npm run pack -- --output dist --version "${{ steps.version.outputs.value }}" --no-update-check --force
+      - name: Verify the packaged plugin contains the helper
+        shell: pwsh
+        run: |
+          $pkg = Get-ChildItem dist/*.streamDeckPlugin | Select-Object -First 1
+          if (-not $pkg) { throw "no .streamDeckPlugin produced" }
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $zip = [System.IO.Compression.ZipFile]::OpenRead($pkg.FullName)
+          try {
+            $entry = $zip.Entries | Where-Object { $_.FullName -like "*bin/teamdeck-helper.exe" }
+            if (-not $entry) { throw "packaged plugin is missing bin/teamdeck-helper.exe" }
+            if ($entry.Length -le 0) { throw "the bundled helper is empty" }
+            Write-Host "packaged helper ok: $($entry.FullName) ($($entry.Length) bytes)"
+          } finally {
+            $zip.Dispose()
+          }
+      - name: Publish SHA256 checksums
+        shell: pwsh
+        run: |
+          Get-ChildItem dist/*.streamDeckPlugin | ForEach-Object {
+            "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash, $_.Name
+          } | Set-Content dist/SHA256SUMS.txt
+          Get-Content dist/SHA256SUMS.txt
       - uses: softprops/action-gh-release@v2
         with:
-          files: dist/*.streamDeckPlugin
+          files: |
+            dist/*.streamDeckPlugin
+            dist/SHA256SUMS.txt
           fail_on_unmatched_files: true
           generate_release_notes: true
