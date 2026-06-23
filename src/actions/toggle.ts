@@ -1,7 +1,7 @@
 import type { MeetingPermissions, MeetingState, ReactionType, TeamsSnapshot } from "../teams/types";
 
 /** Key images for a toggle, by logical state. */
-export type ToggleImages = { whenTrue: string; whenFalse: string; disabled: string };
+type ToggleImages = { whenTrue: string; whenFalse: string; disabled: string };
 
 /** The side-effect-free visual specification of a live-state Teams toggle. */
 export type ToggleSpec = {
