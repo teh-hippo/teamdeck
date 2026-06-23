@@ -47,6 +47,9 @@ jobs:
       - name: Lint the helper with clippy
         working-directory: native
         run: cargo clippy --release -- -D warnings
+      - name: Run the helper unit tests
+        working-directory: native
+        run: cargo test
       - name: Build and bundle the native helper
         run: npm run build:helper
       - name: Smoke-test the helper (one snapshot, exit 0)
