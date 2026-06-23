@@ -43,5 +43,11 @@
 	},
 	"dependencies": {
 		"@elgato/streamdeck": "^2.1.0"
+	},
+	"knip": {
+		"entry": ["tests/*.test.ts", "tools/*.mjs"],
+		"project": ["src/**/*.ts", "tests/**/*.ts", "tools/**/*.mjs"],
+		"ignoreDependencies": ["@biomejs/biome"],
+		"ignoreBinaries": ["biome"]
 	}
 }
