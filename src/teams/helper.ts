@@ -1,15 +1,25 @@
-import { type ChildProcess, spawn } from "node:child_process";
+import { type ChildProcess, spawn as nodeSpawn } from "node:child_process";
 import { createInterface } from "node:readline";
 
 import streamDeck from "@elgato/streamdeck";
 
 import { HELPER_DISCONNECTED, type HelperSnapshot, mapHelperSnapshot } from "./helper-map";
-import { helperPath } from "./helper-path";
+import { helperPath as defaultHelperPath } from "./helper-path";
 import type { Listener, ReactionType, TeamsSnapshot } from "./types";
 
 const MAX_RESTART_DELAY = 30_000;
 
 type HelperMessage = HelperSnapshot & { type?: string; ok?: boolean; cmd?: string };
+
+/** The Stream Deck logger surface the client uses; injectable so unit tests stay quiet. */
+type HelperLogger = Pick<typeof streamDeck.logger, "info" | "warn">;
+
+/** Dependencies, defaulted to production wiring and overridden in unit tests. */
+export type HelperDeps = {
+	spawn?: typeof nodeSpawn;
+	helperPath?: () => string | undefined;
+	logger?: HelperLogger;
+};
 
 /**
  * A Teams source backed by the native UI-Automation helper (built from `native/`, shipped as
@@ -23,6 +33,16 @@ export class HelperClient {
 	#restartDelay = 1_000;
 	#restartTimer?: ReturnType<typeof setTimeout>;
 	readonly #listeners = new Set<Listener>();
+
+	readonly #spawnFn: typeof nodeSpawn;
+	readonly #helperPath: () => string | undefined;
+	readonly #log: HelperLogger;
+
+	constructor(deps: HelperDeps = {}) {
+		this.#spawnFn = deps.spawn ?? nodeSpawn;
+		this.#helperPath = deps.helperPath ?? defaultHelperPath;
+		this.#log = deps.logger ?? streamDeck.logger;
+	}
 
 	get snapshot(): TeamsSnapshot {
 		return this.#snapshot;
@@ -97,7 +117,7 @@ export class HelperClient {
 	#send(cmd: string, arg?: string): void {
 		const stdin = this.#proc?.stdin;
 		if (!stdin?.writable) {
-			streamDeck.logger.warn(`Teams helper not running; cannot send "${cmd}".`);
+			this.#log.warn(`Teams helper not running; cannot send "${cmd}".`);
 			this.recover();
 			return;
 		}
@@ -105,31 +125,31 @@ export class HelperClient {
 			stdin.write(`${JSON.stringify(arg === undefined ? { cmd } : { cmd, arg })}\n`);
 		} catch (err) {
 			// The process can die between the writable check and the write (EPIPE); recover.
-			streamDeck.logger.warn(`Teams helper write failed for "${cmd}": ${String(err)}`);
+			this.#log.warn(`Teams helper write failed for "${cmd}": ${String(err)}`);
 			this.recover();
 		}
 	}
 
 	#spawn(): void {
-		const exe = helperPath();
+		const exe = this.#helperPath();
 		if (!exe) {
-			streamDeck.logger.warn("Teams UIA helper binary not found; helper source unavailable.");
+			this.#log.warn("Teams UIA helper binary not found; helper source unavailable.");
 			return;
 		}
 		clearTimeout(this.#restartTimer);
-		const proc = spawn(exe, ["serve"], { stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
+		const proc = this.#spawnFn(exe, ["serve"], { stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
 		this.#proc = proc;
 
 		if (proc.stdout) {
 			createInterface({ input: proc.stdout }).on("line", (line) => this.#onLine(line));
 		}
-		proc.stderr?.on("data", (chunk) => streamDeck.logger.warn(`Teams helper: ${String(chunk).trim()}`));
-		proc.stdin?.on("error", (err) => streamDeck.logger.warn(`Teams helper stdin error: ${err.message}`));
+		proc.stderr?.on("data", (chunk) => this.#log.warn(`Teams helper: ${String(chunk).trim()}`));
+		proc.stdin?.on("error", (err) => this.#log.warn(`Teams helper stdin error: ${err.message}`));
 		proc.on("spawn", () => {
 			this.#restartDelay = 1_000;
-			streamDeck.logger.info("Teams UIA helper started.");
+			this.#log.info("Teams UIA helper started.");
 		});
-		proc.on("error", (err) => streamDeck.logger.warn(`Teams UIA helper error: ${err.message}`));
+		proc.on("error", (err) => this.#log.warn(`Teams UIA helper error: ${err.message}`));
 		proc.on("exit", (code) => {
 			if (this.#proc !== proc) {
 				return; // a newer process already replaced this one; ignore the stale exit.
@@ -137,7 +157,7 @@ export class HelperClient {
 			this.#proc = undefined;
 			this.#setSnapshot(HELPER_DISCONNECTED);
 			if (!this.#stopped) {
-				streamDeck.logger.info(`Teams UIA helper exited (code ${code ?? "?"}); restarting.`);
+				this.#log.info(`Teams UIA helper exited (code ${code ?? "?"}); restarting.`);
 				this.#scheduleRestart();
 			}
 		});
@@ -165,7 +185,7 @@ export class HelperClient {
 		}
 		if (msg.type === "result") {
 			if (msg.ok === false) {
-				streamDeck.logger.warn(`Teams helper command "${msg.cmd}" failed.`);
+				this.#log.warn(`Teams helper command "${msg.cmd}" failed.`);
 			}
 			return;
 		}
