@@ -20,7 +20,7 @@
 		"lint": "biome check",
 		"format": "biome format --write",
 		"pack": "node tools/build-helper.mjs && streamdeck pack io.github.teh-hippo.teamdeck.sdPlugin",
-		"test": "node --test \"tests/*.test.ts\"",
+		"test": "node --import ./tools/test-resolver.mjs --test \"tests/*.test.ts\"",
 		"proof": "node tools/proof-gate.mjs",
 		"secret-scan": "node tools/secret-scan.mjs",
 		"hooks": "node tools/install-hooks.mjs",
