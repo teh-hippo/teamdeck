@@ -1,7 +1,7 @@
 //! TeamDeck native helper.
 //!
 //! Reads Microsoft Teams meeting state via Windows UI Automation and actuates the meeting controls.
-//! Emits the snapshot contract as one JSON object per line on stdout; see `agent/specs/helper.md`.
+//! Emits the snapshot contract as one JSON object per line on stdout.
 
 use serde::Serialize;
 use std::io::{BufRead, Write};

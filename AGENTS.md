@@ -1,7 +1,7 @@
 # AGENTS.md
 
 Guidance for coding agents in this repository. See [`README.md`](README.md) for the product
-overview and [`agent/specs/`](agent/specs/) for the helper contract and architecture.
+overview and [`CONTRIBUTING.md`](CONTRIBUTING.md) for building and testing.
 
 ## Build, compile and test
 

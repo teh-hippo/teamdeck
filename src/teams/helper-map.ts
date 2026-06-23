@@ -3,7 +3,7 @@ import type { MeetingPermissions, MeetingState, TeamsSnapshot } from "./types";
 /** One signal as reported by the UIA helper (`value` is `null` when unknown). */
 export type HelperSignal = { value: boolean | null; available: boolean; source: string };
 
-/** A snapshot line emitted by the helper's `serve` mode (see `native/` and `agent/specs/helper.md`). */
+/** A snapshot line emitted by the helper's `serve` mode (see `native/`). */
 export type HelperSnapshot = {
 	type?: string;
 	teamsRunning: boolean;
