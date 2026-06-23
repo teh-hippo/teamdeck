@@ -6,6 +6,11 @@ on:
     paths: ["native/**"]
   schedule:
     - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: security-audit-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   audit:

@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: release-please-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   release-please:
     uses: teh-hippo/common-repo-configs/.github/workflows/release-please.yml@8109fd5b25e74393d29257f39487925569f27ae5 # v1

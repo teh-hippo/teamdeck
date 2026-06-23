@@ -5,13 +5,22 @@ on:
     branches: [main]
   schedule:
     - cron: "0 18 * * 2"
+  workflow_dispatch:
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   analyze:
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript, rust]
     uses: teh-hippo/common-repo-configs/.github/workflows/codeql.yml@8109fd5b25e74393d29257f39487925569f27ae5 # v1
     permissions:
       contents: read
       security-events: write
       actions: read
     with:
-      language: javascript-typescript
+      language: ${{ matrix.language }}
