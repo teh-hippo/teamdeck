@@ -1,0 +1,4 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["github>teh-hippo/common-repo-configs//renovate/slots/thu-0700.json5"]
+}
