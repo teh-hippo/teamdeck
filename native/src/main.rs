@@ -50,6 +50,9 @@ struct WindowInfo {
     name: String,
 }
 
+/// The snapshot contract emitted as one JSON line per tick. `teamsRunning`, `inMeeting` and
+/// `signals` drive the plugin; `schema`, `ts`, `window` and each signal's `source` are diagnostic
+/// fields for a human inspecting the helper, not consumed by the plugin's mapper.
 #[derive(Serialize)]
 struct Snapshot {
     schema: u32,
@@ -372,32 +375,13 @@ fn main() {
         }
     };
 
-    // Persistent service mode:  teamdeck-helper serve
+    // Persistent service mode (used by the plugin):  teamdeck-helper serve
     if args.get(1).map(|s| s.as_str()) == Some("serve") {
         serve(&automation);
         return;
     }
 
-    // Control mode:  teamdeck-helper do <verb> [arg]
-    if args.get(1).map(|s| s.as_str()) == Some("do") {
-        let verb = args.get(2).map(|s| s.as_str()).unwrap_or("");
-        let arg = args.get(3).map(|s| s.as_str());
-        let ok = do_command(&automation, verb, arg);
-        println!(
-            "{}",
-            serde_json::json!({ "cmd": verb, "arg": arg, "ok": ok })
-        );
-        std::process::exit(if ok { 0 } else { 1 });
-    }
-
-    // Read mode: emit one snapshot, or stream with --loop.
-    let loop_mode = args.iter().any(|a| a == "--loop");
-    loop {
-        let snap = build_snapshot(&automation);
-        println!("{}", serde_json::to_string(&snap).unwrap());
-        if !loop_mode {
-            break;
-        }
-        std::thread::sleep(std::time::Duration::from_millis(500));
-    }
+    // Read mode (used by the CI and release smoke tests): emit one snapshot and exit.
+    let snap = build_snapshot(&automation);
+    println!("{}", serde_json::to_string(&snap).unwrap());
 }
