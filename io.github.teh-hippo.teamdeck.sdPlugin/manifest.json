@@ -158,21 +158,6 @@
 			]
 		},
 		{
-			"Name": "Recording",
-			"UUID": "io.github.teh-hippo.teamdeck.recording",
-			"Icon": "imgs/actions/recording/icon",
-			"Tooltip": "Show whether the current Microsoft Teams meeting is recording.",
-			"Controllers": [
-				"Keypad"
-			],
-			"States": [
-				{
-					"Image": "imgs/actions/recording/off",
-					"TitleAlignment": "middle"
-				}
-			]
-		},
-		{
 			"Name": "Screen Sharing",
 			"UUID": "io.github.teh-hippo.teamdeck.sharing",
 			"Icon": "imgs/actions/sharing/icon",
@@ -183,21 +168,6 @@
 			"States": [
 				{
 					"Image": "imgs/actions/sharing/off",
-					"TitleAlignment": "middle"
-				}
-			]
-		},
-		{
-			"Name": "Unread Messages",
-			"UUID": "io.github.teh-hippo.teamdeck.unread",
-			"Icon": "imgs/actions/unread/icon",
-			"Tooltip": "Show whether Microsoft Teams reports unread meeting messages.",
-			"Controllers": [
-				"Keypad"
-			],
-			"States": [
-				{
-					"Image": "imgs/actions/unread/off",
 					"TitleAlignment": "middle"
 				}
 			]

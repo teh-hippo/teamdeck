@@ -4,9 +4,7 @@ export type MeetingState = {
 	isVideoOn: boolean;
 	isHandRaised: boolean;
 	isInMeeting: boolean;
-	isRecordingOn: boolean;
 	isSharing: boolean;
-	hasUnreadMessages: boolean;
 };
 
 /** Per-action capabilities, synthesized from what the helper can observe and actuate. */

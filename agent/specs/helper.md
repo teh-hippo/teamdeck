@@ -29,9 +29,7 @@ One JSON object per line on stdout. In `serve` mode each carries `"type": "snaps
     "mute":      { "value": true,  "available": true,  "source": "uia-label" },
     "camera":    { "value": true,  "available": true,  "source": "uia-label" },
     "hand":      { "value": null,  "available": false, "source": "flyout-only" },
-    "sharing":   { "value": false, "available": true,  "source": "uia-window" },
-    "recording": { "value": null,  "available": false, "source": "none" },
-    "unread":    { "value": null,  "available": false, "source": "none" }
+    "sharing":   { "value": false, "available": true,  "source": "uia-window" }
   }
 }
 ```
@@ -42,7 +40,7 @@ One JSON object per line on stdout. In `serve` mode each carries `"type": "snaps
   plugin renders such a field as "unavailable", never a definite on/off. A `true` `value` means
   muted, camera-on, hand-raised or sharing respectively.
 - Signals the helper cannot read are always `available: false`: `hand` (only readable behind the
-  reactions flyout), `recording`, and `unread`.
+  reactions flyout).
 - Mute and camera `value` are derived from the English Teams control labels, so they read correctly
   only while Teams is in English; the label lexicon lives in the helper and can be extended.
 

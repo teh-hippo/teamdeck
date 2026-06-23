@@ -38,7 +38,6 @@ meeting.
   report state correctly until their labels are added (control still works).
 - **Raise-hand state is not shown.** Teams only exposes it behind the reactions flyout, so the key
   raises and lowers your hand but does not light up.
-- **Recording and unread-message state are not available** through this method.
 - TeamDeck depends on the structure of the Teams desktop window, which Microsoft can change in any
   update. If a Teams update moves a control, a key may stop working until TeamDeck is updated.
 

@@ -1,28 +1,12 @@
 import { action } from "@elgato/streamdeck";
 import { StatusAction } from "./key-action";
-import { IN_MEETING, RECORDING, SHARING, UNREAD } from "./status";
-
-/** Mirrors whether the current Microsoft Teams meeting is recording. */
-@action({ UUID: "io.github.teh-hippo.teamdeck.recording" })
-export class Recording extends StatusAction {
-	constructor() {
-		super(RECORDING);
-	}
-}
+import { IN_MEETING, SHARING } from "./status";
 
 /** Mirrors whether screen sharing is active in the current Microsoft Teams meeting. */
 @action({ UUID: "io.github.teh-hippo.teamdeck.sharing" })
 export class Sharing extends StatusAction {
 	constructor() {
 		super(SHARING);
-	}
-}
-
-/** Mirrors whether Microsoft Teams reports unread meeting messages. */
-@action({ UUID: "io.github.teh-hippo.teamdeck.unread" })
-export class Unread extends StatusAction {
-	constructor() {
-		super(UNREAD);
 	}
 }
 

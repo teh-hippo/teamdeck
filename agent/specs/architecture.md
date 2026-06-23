@@ -62,8 +62,8 @@ Each toggle key derives its visual from the latest snapshot:
 
 Gating uses in-meeting plus the matching permission; because permissions are synthesized false out
 of a meeting, the greyed state is correct even if a stale state field lingers. A field whose value
-the helper cannot read (recording, unread, raise-hand state) is marked unavailable so a key never
-shows a confident-but-wrong state.
+the helper cannot read (such as raise-hand state) is marked unavailable so a key never shows a
+confident-but-wrong state.
 
 ## Adding an action
 

@@ -2,7 +2,7 @@ import streamDeck from "@elgato/streamdeck";
 
 import { Leave } from "./actions/leave";
 import { Applause, Laugh, Like, Love, Surprised } from "./actions/reactions";
-import { InMeeting, Recording, Sharing, Unread } from "./actions/status-tiles";
+import { InMeeting, Sharing } from "./actions/status-tiles";
 import { Camera, Hand, Mute } from "./actions/toggles";
 import { teams } from "./teams/client";
 import { registerPropertyInspector } from "./ui";
@@ -20,9 +20,7 @@ streamDeck.actions.registerAction(new Laugh());
 streamDeck.actions.registerAction(new Like());
 streamDeck.actions.registerAction(new Love());
 streamDeck.actions.registerAction(new Surprised());
-streamDeck.actions.registerAction(new Recording());
 streamDeck.actions.registerAction(new Sharing());
-streamDeck.actions.registerAction(new Unread());
 streamDeck.actions.registerAction(new InMeeting());
 
 // Register with Stream Deck first, then start the Teams helper so plugin registration is never

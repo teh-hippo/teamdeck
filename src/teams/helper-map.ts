@@ -14,8 +14,6 @@ export type HelperSnapshot = {
 		camera: HelperSignal;
 		hand: HelperSignal;
 		sharing: HelperSignal;
-		recording: HelperSignal;
-		unread: HelperSignal;
 	};
 };
 
@@ -51,8 +49,6 @@ export function mapHelperSnapshot(h: HelperSnapshot): TeamsSnapshot {
 		isVideoOn: known(s.camera),
 		isHandRaised: known(s.hand),
 		isSharing: known(s.sharing),
-		isRecordingOn: known(s.recording),
-		hasUnreadMessages: known(s.unread),
 	};
 
 	// A key is actionable only in a meeting; mute/camera also require that the helper can read the
@@ -71,8 +67,6 @@ export function mapHelperSnapshot(h: HelperSnapshot): TeamsSnapshot {
 		isVideoOn: s.camera.available,
 		isHandRaised: s.hand.available,
 		isSharing: s.sharing.available,
-		isRecordingOn: s.recording.available,
-		hasUnreadMessages: s.unread.available,
 	};
 
 	return { connected: h.teamsRunning, state, permissions, availability };
