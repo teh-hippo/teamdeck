@@ -11,8 +11,8 @@ const MAX_RESTART_DELAY = 30_000;
 
 type HelperMessage = HelperSnapshot & { type?: string; ok?: boolean; cmd?: string };
 
-/** The Stream Deck logger surface the client uses; injectable so unit tests stay quiet. */
-type HelperLogger = Pick<typeof streamDeck.logger, "info" | "warn">;
+/** The minimal logger surface the client uses; injectable so unit tests can supply a double. */
+type HelperLogger = { info(message: string): void; warn(message: string): void };
 
 /** Dependencies, defaulted to production wiring and overridden in unit tests. */
 export type HelperDeps = {
