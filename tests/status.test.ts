@@ -1,13 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { IN_MEETING, RECORDING, SHARING, type StatusSpec, selectStatusImage, UNREAD } from "../src/actions/status.ts";
+import { IN_MEETING, SHARING, type StatusSpec, selectStatusImage } from "../src/actions/status.ts";
 import type { MeetingState, TeamsSnapshot } from "../src/teams/types.ts";
 
 const specs: Array<{ name: string; spec: StatusSpec }> = [
-	{ name: "Recording", spec: RECORDING },
 	{ name: "Screen Sharing", spec: SHARING },
-	{ name: "Unread Messages", spec: UNREAD },
 	{ name: "In Meeting", spec: IN_MEETING },
 ];
 
@@ -33,39 +31,33 @@ for (const { name, spec } of specs) {
 test("out of meeting renders In Meeting off and meeting-scoped statuses unavailable", () => {
 	const outOfMeeting: Partial<MeetingState> = {
 		isInMeeting: false,
-		isRecordingOn: true,
 		isSharing: true,
-		hasUnreadMessages: true,
 	};
 	assert.equal(selectStatusImage(IN_MEETING, snapshot(outOfMeeting)), IN_MEETING.images.off);
-	assert.equal(selectStatusImage(RECORDING, snapshot(outOfMeeting)), RECORDING.images.unavailable);
 	assert.equal(selectStatusImage(SHARING, snapshot(outOfMeeting)), SHARING.images.unavailable);
-	assert.equal(selectStatusImage(UNREAD, snapshot(outOfMeeting)), UNREAD.images.unavailable);
 });
 
 test("empty state uses Boolean(undefined) for unavailable or off", () => {
 	const empty = snapshot({});
 	assert.equal(selectStatusImage(IN_MEETING, empty), IN_MEETING.images.off);
-	assert.equal(selectStatusImage(RECORDING, empty), RECORDING.images.unavailable);
 	assert.equal(selectStatusImage(SHARING, empty), SHARING.images.unavailable);
-	assert.equal(selectStatusImage(UNREAD, empty), UNREAD.images.unavailable);
 });
 
 test("availability=false renders unavailable even in a meeting (never fakes unknown state)", () => {
-	const inMeetingUnknownRecording: TeamsSnapshot = {
+	const inMeetingUnknownSharing: TeamsSnapshot = {
 		connected: true,
-		state: { isInMeeting: true, isRecordingOn: undefined },
+		state: { isInMeeting: true, isSharing: undefined },
 		permissions: {},
-		availability: { isInMeeting: true, isRecordingOn: false },
+		availability: { isInMeeting: true, isSharing: false },
 	};
-	assert.equal(selectStatusImage(RECORDING, inMeetingUnknownRecording), RECORDING.images.unavailable);
+	assert.equal(selectStatusImage(SHARING, inMeetingUnknownSharing), SHARING.images.unavailable);
 
 	// When the field IS known (availability true), it renders the real state.
-	const knownNotRecording: TeamsSnapshot = {
+	const knownNotSharing: TeamsSnapshot = {
 		connected: true,
-		state: { isInMeeting: true, isRecordingOn: false },
+		state: { isInMeeting: true, isSharing: false },
 		permissions: {},
-		availability: { isInMeeting: true, isRecordingOn: true },
+		availability: { isInMeeting: true, isSharing: true },
 	};
-	assert.equal(selectStatusImage(RECORDING, knownNotRecording), RECORDING.images.off);
+	assert.equal(selectStatusImage(SHARING, knownNotSharing), SHARING.images.off);
 });

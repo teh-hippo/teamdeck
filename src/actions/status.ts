@@ -15,22 +15,12 @@ export function selectStatusImage(spec: StatusSpec, snapshot: TeamsSnapshot): st
 	if (spec.requiresMeeting && !snapshot.state.isInMeeting) {
 		return spec.images.unavailable;
 	}
-	// Unknown (e.g. recording/unread when read via UIA) must never render a fake on/off state.
+	// A field the helper cannot read (availability false) must never render a fake on/off state.
 	if (snapshot.availability && snapshot.availability[spec.stateField] === false) {
 		return spec.images.unavailable;
 	}
 	return snapshot.state[spec.stateField] ? spec.images.on : spec.images.off;
 }
-
-export const RECORDING: StatusSpec = {
-	stateField: "isRecordingOn",
-	requiresMeeting: true,
-	images: {
-		on: "imgs/actions/recording/on",
-		off: "imgs/actions/recording/off",
-		unavailable: "imgs/actions/recording/unavailable",
-	},
-};
 
 export const SHARING: StatusSpec = {
 	stateField: "isSharing",
@@ -39,16 +29,6 @@ export const SHARING: StatusSpec = {
 		on: "imgs/actions/sharing/on",
 		off: "imgs/actions/sharing/off",
 		unavailable: "imgs/actions/sharing/unavailable",
-	},
-};
-
-export const UNREAD: StatusSpec = {
-	stateField: "hasUnreadMessages",
-	requiresMeeting: true,
-	images: {
-		on: "imgs/actions/unread/on",
-		off: "imgs/actions/unread/off",
-		unavailable: "imgs/actions/unread/unavailable",
 	},
 };
 

@@ -42,8 +42,6 @@ struct Signals {
     camera: Signal,
     hand: Signal,
     sharing: Signal,
-    recording: Signal,
-    unread: Signal,
 }
 
 #[derive(Serialize)]
@@ -133,8 +131,6 @@ fn build_snapshot(automation: &UIAutomation) -> Snapshot {
                 source: "flyout-only".into(),
             },
             sharing: Signal::unknown(),
-            recording: Signal::unknown(),
-            unread: Signal::unknown(),
         },
     };
 

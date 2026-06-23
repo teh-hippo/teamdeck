@@ -17,8 +17,6 @@ function helperSnap(overrides: Partial<HelperSnapshot> = {}): HelperSnapshot {
 			camera: sig(true),
 			hand: sig(null, false, "flyout-only"),
 			sharing: sig(false, true, "uia-window"),
-			recording: sig(null, false, "none"),
-			unread: sig(null, false, "none"),
 		},
 		...overrides,
 	};
@@ -52,11 +50,7 @@ test("synthesizes permissions from availability and meeting (B1)", () => {
 
 test("unknown signals are undefined and marked unavailable (B2 - never fake state)", () => {
 	const s = mapHelperSnapshot(helperSnap());
-	assert.equal(s.state.isRecordingOn, undefined);
-	assert.equal(s.state.hasUnreadMessages, undefined);
 	assert.equal(s.state.isHandRaised, undefined, "hand state is behind the flyout, not readable");
-	assert.equal(s.availability?.isRecordingOn, false);
-	assert.equal(s.availability?.hasUnreadMessages, false);
 	assert.equal(s.availability?.isHandRaised, false);
 	assert.equal(s.availability?.isMuted, true, "mute is readable");
 	assert.equal(s.availability?.isInMeeting, true);
@@ -71,8 +65,6 @@ test("out of meeting: no command permissions, mute/camera unavailable", () => {
 				camera: sig(null, false, "none"),
 				hand: sig(null, false, "flyout-only"),
 				sharing: sig(null, false, "none"),
-				recording: sig(null, false, "none"),
-				unread: sig(null, false, "none"),
 			},
 		}),
 	);
