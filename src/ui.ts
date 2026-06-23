@@ -4,7 +4,7 @@ import { teams } from "./teams/client";
 import type { TeamsSnapshot } from "./teams/types";
 
 /** Diagnostic status payload sent to the property inspector. */
-export type StatusPayload = { helperRunning: boolean; teamsRunning: boolean; inMeeting: boolean };
+type StatusPayload = { helperRunning: boolean; teamsRunning: boolean; inMeeting: boolean };
 
 /** Derives the diagnostic status payload from a snapshot and whether the helper is running. */
 export function statusPayload(snapshot: TeamsSnapshot, helperRunning: boolean): StatusPayload {
