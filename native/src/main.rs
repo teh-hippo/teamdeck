@@ -65,7 +65,7 @@ struct Snapshot {
 fn now_ms() -> u128 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .unwrap()
+        .unwrap_or_default()
         .as_millis()
 }
 
@@ -326,7 +326,9 @@ fn serve(automation: &UIAutomation) {
                         break;
                     }
                 }
-                Err(_) => break,
+                // A line read error (e.g. invalid UTF-8) skips just that line; genuine EOF ends the
+                // loop by yielding None, which drops `tx` and disconnects the channel checked below.
+                Err(_) => continue,
             }
         }
         // EOF on stdin (parent exited): dropping `tx` disconnects the channel checked below.
