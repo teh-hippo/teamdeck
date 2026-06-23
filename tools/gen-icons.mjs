@@ -28,9 +28,7 @@ const COLORS = {
 	laugh: "#FBBF24",
 	wow: "#C084FC",
 	disabled: "#6B7280",
-	recording: "#D13438",
 	sharing: "#2563EB",
-	unread: "#F59E0B",
 	inmeeting: "#2EA043",
 	statusOff: "#5A6B7B",
 	unavailable: "#3D3D3D",
@@ -79,9 +77,7 @@ const ICONS = [
 // Read-only status tiles share one regular shape: a neutral action-list glyph plus on/off/
 // unavailable key images, coloured by status. Expanded here to avoid a second generator.
 const STATUS_TILES = [
-	["recording", "record_24_filled.svg"],
 	["sharing", "share_screen_start_24_filled.svg"],
-	["unread", "chat_24_filled.svg"],
 	["inmeeting", "people_24_filled.svg"],
 ];
 for (const [tile, glyph] of STATUS_TILES) {
