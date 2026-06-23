@@ -60,3 +60,29 @@ jobs:
           $snap = $out | ConvertFrom-Json
           if ($null -eq $snap.schema) { throw "helper did not emit a snapshot" }
           Write-Host "helper smoke ok: schema=$($snap.schema) teamsRunning=$($snap.teamsRunning)"
+
+  machete:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      - name: Check for unused Rust dependencies
+        run: |
+          cargo install cargo-machete --locked
+          cargo machete native
+
+  knip:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Advisory: unused files/exports/deps are reported but do not fail the build.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - name: Report unused files, exports and dependencies
+        run: npx --yes knip@5
