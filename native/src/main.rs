@@ -385,3 +385,72 @@ fn main() {
     let snap = build_snapshot(&automation);
     println!("{}", serde_json::to_string(&snap).unwrap());
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn map_mute_reads_the_action_verb() {
+        assert_eq!(map_mute("Unmute mic"), Some(true), "Unmute => muted");
+        assert_eq!(map_mute("Mute mic"), Some(false), "Mute => unmuted");
+        assert_eq!(map_mute("Microphone"), None);
+    }
+
+    #[test]
+    fn map_camera_is_case_insensitive() {
+        assert_eq!(
+            map_camera("Turn camera off"),
+            Some(true),
+            "off label => camera on"
+        );
+        assert_eq!(map_camera("TURN CAMERA OFF"), Some(true));
+        assert_eq!(
+            map_camera("Turn camera on"),
+            Some(false),
+            "on label => camera off"
+        );
+        assert_eq!(map_camera("No control here"), None);
+    }
+
+    #[test]
+    fn react_id_maps_every_reaction() {
+        assert_eq!(react_id("like"), Some("like-button"));
+        assert_eq!(react_id("love"), Some("heart-button"));
+        assert_eq!(react_id("laugh"), Some("laugh-button"));
+        assert_eq!(react_id("surprised"), Some("surprised-button"));
+        assert_eq!(react_id("applause"), Some("applause-button"));
+        assert_eq!(react_id("nope"), None);
+    }
+
+    #[test]
+    fn snapshot_serialises_the_wire_contract() {
+        let snap = Snapshot {
+            schema: 1,
+            ts: 0,
+            teams_running: true,
+            in_meeting: true,
+            window: None,
+            signals: Signals {
+                mute: known(false, "uia-label"),
+                camera: Signal::unknown(),
+                hand: Signal::unknown(),
+                sharing: known(true, "uia-window"),
+            },
+        };
+        let v: serde_json::Value =
+            serde_json::from_str(&serde_json::to_string(&snap).unwrap()).unwrap();
+        assert_eq!(
+            v["teamsRunning"],
+            serde_json::json!(true),
+            "uses the renamed key"
+        );
+        assert_eq!(v["inMeeting"], serde_json::json!(true));
+        assert!(
+            v.get("teams_running").is_none(),
+            "must not emit the snake_case field name"
+        );
+        assert_eq!(v["signals"]["mute"]["value"], serde_json::json!(false));
+        assert_eq!(v["signals"]["mute"]["available"], serde_json::json!(true));
+    }
+}
