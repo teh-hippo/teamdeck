@@ -11,8 +11,8 @@ export type ToggleSpec = {
 };
 
 /**
- * Whether a key gated by the given permission can act, from a snapshot. Mirrors
- * protocol.actionable; kept here so this module stays dependency-free and node-testable.
+ * Whether a key gated by the given permission can act, from a snapshot. Kept here so this module
+ * stays dependency-free and node-testable; it is the single source of truth for actionability.
  */
 export function isActionable(snapshot: TeamsSnapshot, permission: keyof MeetingPermissions): boolean {
 	return snapshot.connected && Boolean(snapshot.state.isInMeeting) && Boolean(snapshot.permissions[permission]);
