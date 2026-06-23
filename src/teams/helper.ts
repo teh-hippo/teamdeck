@@ -15,7 +15,7 @@ type HelperMessage = HelperSnapshot & { type?: string; ok?: boolean; cmd?: strin
 type HelperLogger = { info(message: string): void; warn(message: string): void };
 
 /** Dependencies, defaulted to production wiring and overridden in unit tests. */
-export type HelperDeps = {
+type HelperDeps = {
 	spawn?: typeof nodeSpawn;
 	helperPath?: () => string | undefined;
 	logger?: HelperLogger;
