@@ -5,7 +5,6 @@ export type HelperSignal = { value: boolean | null; available: boolean; source: 
 
 /** A snapshot line emitted by the helper's `serve` mode (see `native/`). */
 export type HelperSnapshot = {
-	type?: string;
 	teamsRunning: boolean;
 	inMeeting: boolean;
 	window: { pid: number; name: string } | null;

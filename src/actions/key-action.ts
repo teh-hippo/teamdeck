@@ -19,7 +19,7 @@ export type ImageFor = (snapshot: TeamsSnapshot) => string;
  * every visible instance via setImage (memoised) whenever Teams state changes; subclasses supply
  * the image selector.
  */
-export abstract class RenderingKeyAction extends SingletonAction {
+abstract class RenderingKeyAction extends SingletonAction {
 	readonly #lastImage = new Map<string, string>();
 	readonly #imageFor: ImageFor;
 

@@ -1,6 +1,6 @@
 import type { MeetingState, TeamsSnapshot } from "../teams/types";
 
-export type StatusImages = { on: string; off: string; unavailable: string };
+type StatusImages = { on: string; off: string; unavailable: string };
 
 export type StatusSpec = {
 	stateField: keyof MeetingState;
