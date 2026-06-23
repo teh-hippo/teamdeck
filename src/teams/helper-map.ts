@@ -24,9 +24,16 @@ export const HELPER_DISCONNECTED: TeamsSnapshot = {
 	availability: {},
 };
 
+/** Whether a signal carries a value the UI can trust: the helper marked it available and it is not
+ * null. A signal that is available but null (value unknown) must render "unknown" rather than a fake
+ * off state, so both the mapped state value and the availability map derive from this one predicate. */
+function isKnown(sig: HelperSignal): boolean {
+	return sig.available && sig.value !== null;
+}
+
 /** A signal's value, or `undefined` when the helper cannot read it (so it renders "unknown"). */
 function known(sig: HelperSignal): boolean | undefined {
-	return sig.available ? (sig.value ?? undefined) : undefined;
+	return isKnown(sig) ? (sig.value ?? undefined) : undefined;
 }
 
 /**
@@ -62,10 +69,10 @@ export function mapHelperSnapshot(h: HelperSnapshot): TeamsSnapshot {
 
 	const availability: Partial<Record<keyof MeetingState, boolean>> = {
 		isInMeeting: true,
-		isMuted: s.mute.available,
-		isVideoOn: s.camera.available,
-		isHandRaised: s.hand.available,
-		isSharing: s.sharing.available,
+		isMuted: isKnown(s.mute),
+		isVideoOn: isKnown(s.camera),
+		isHandRaised: isKnown(s.hand),
+		isSharing: isKnown(s.sharing),
 	};
 
 	return { connected: h.teamsRunning, state, permissions, availability };
