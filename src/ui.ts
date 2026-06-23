@@ -1,12 +1,15 @@
 import streamDeck from "@elgato/streamdeck";
 
 import { teams } from "./teams/client";
+import type { TeamsSnapshot } from "./teams/types";
 
 /** Diagnostic status payload sent to the property inspector. */
-function status() {
-	const snapshot = teams.snapshot;
+export type StatusPayload = { helperRunning: boolean; teamsRunning: boolean; inMeeting: boolean };
+
+/** Derives the diagnostic status payload from a snapshot and whether the helper is running. */
+export function statusPayload(snapshot: TeamsSnapshot, helperRunning: boolean): StatusPayload {
 	return {
-		helperRunning: teams.running,
+		helperRunning,
 		teamsRunning: snapshot.connected,
 		inMeeting: Boolean(snapshot.state.isInMeeting),
 	};
@@ -17,6 +20,7 @@ function status() {
  * sendToPropertyInspector only delivers while a PI is open, so pushing on every snapshot is safe.
  */
 export function registerPropertyInspector(): void {
-	streamDeck.ui.onDidAppear(() => void streamDeck.ui.sendToPropertyInspector(status()));
-	teams.subscribe(() => void streamDeck.ui.sendToPropertyInspector(status()));
+	const push = (): void => void streamDeck.ui.sendToPropertyInspector(statusPayload(teams.snapshot, teams.running));
+	streamDeck.ui.onDidAppear(push);
+	teams.subscribe(push);
 }
