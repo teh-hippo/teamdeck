@@ -1,6 +1,6 @@
 [package]
 name = "teamdeck-helper"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "TeamDeck native helper: reads Microsoft Teams meeting state and runs control commands via Windows UI Automation."
 
