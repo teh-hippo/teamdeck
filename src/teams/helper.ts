@@ -55,7 +55,7 @@ export class HelperClient {
 
 	subscribe(listener: Listener): () => void {
 		this.#listeners.add(listener);
-		listener(this.#snapshot);
+		this.#notify(listener, this.#snapshot);
 		return () => this.#listeners.delete(listener);
 	}
 
@@ -141,26 +141,34 @@ export class HelperClient {
 		this.#proc = proc;
 
 		if (proc.stdout) {
-			createInterface({ input: proc.stdout }).on("line", (line) => this.#onLine(line));
+			createInterface({ input: proc.stdout }).on("line", (line) => {
+				// Ignore buffered lines from a process we have already replaced (see the exit guard).
+				if (this.#proc === proc) {
+					this.#onLine(line);
+				}
+			});
 		}
 		proc.stderr?.on("data", (chunk) => this.#log.warn(`Teams helper: ${String(chunk).trim()}`));
 		proc.stdin?.on("error", (err) => this.#log.warn(`Teams helper stdin error: ${err.message}`));
-		proc.on("spawn", () => {
-			this.#restartDelay = 1_000;
-			this.#log.info("Teams UIA helper started.");
-		});
-		proc.on("error", (err) => this.#log.warn(`Teams UIA helper error: ${err.message}`));
-		proc.on("exit", (code) => {
+		proc.on("spawn", () => this.#log.info("Teams UIA helper started."));
+		const handleGone = (reason: string): void => {
 			if (this.#proc !== proc) {
-				return; // a newer process already replaced this one; ignore the stale exit.
+				return; // a newer process already replaced this one; ignore.
 			}
 			this.#proc = undefined;
 			this.#setSnapshot(HELPER_DISCONNECTED);
 			if (!this.#stopped) {
-				this.#log.info(`Teams UIA helper exited (code ${code ?? "?"}); restarting.`);
+				this.#log.info(`Teams UIA helper ${reason}; restarting.`);
 				this.#scheduleRestart();
 			}
+		};
+		proc.on("error", (err) => {
+			this.#log.warn(`Teams UIA helper error: ${err.message}`);
+			handleGone("failed to start");
 		});
+		// 'close' always fires once the process is gone (after 'exit', or after 'error' when the
+		// helper never started), so recovery cannot stall on a spawn error that emits no 'exit'.
+		proc.on("close", (code) => handleGone(`exited (code ${code ?? "?"})`));
 	}
 
 	#scheduleRestart(): void {
@@ -189,13 +197,34 @@ export class HelperClient {
 			}
 			return;
 		}
-		this.#setSnapshot(mapHelperSnapshot(msg));
+		let snapshot: TeamsSnapshot;
+		try {
+			snapshot = mapHelperSnapshot(msg);
+		} catch (err) {
+			// A parseable but malformed line (e.g. missing signals) must not crash the plugin.
+			this.#log.warn(`Ignoring malformed Teams helper snapshot: ${String(err)}`);
+			return;
+		}
+		// A healthy helper is emitting snapshots, so reset the restart backoff here rather than on
+		// 'spawn' (which fires before the helper has proven it can stay up).
+		this.#restartDelay = 1_000;
+		this.#setSnapshot(snapshot);
 	}
 
 	#setSnapshot(snapshot: TeamsSnapshot): void {
 		this.#snapshot = snapshot;
 		for (const listener of this.#listeners) {
+			this.#notify(listener, snapshot);
+		}
+	}
+
+	/** Delivers a snapshot to one listener, isolating a throwing subscriber so it can neither abort
+	 * the fan-out nor escape as an uncaught exception that would crash the plugin. */
+	#notify(listener: Listener, snapshot: TeamsSnapshot): void {
+		try {
 			listener(snapshot);
+		} catch (err) {
+			this.#log.warn(`Teams snapshot listener threw: ${String(err)}`);
 		}
 	}
 }
