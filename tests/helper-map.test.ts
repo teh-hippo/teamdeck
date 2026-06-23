@@ -79,3 +79,10 @@ test("teamsRunning false maps to disconnected", () => {
 	const s = mapHelperSnapshot(helperSnap({ teamsRunning: false, inMeeting: false }));
 	assert.equal(s.connected, false);
 });
+
+test("an available-but-null signal is unknown, never a fake off state", () => {
+	// The helper marks a control available but reports a null (unreadable) value.
+	const s = mapHelperSnapshot(helperSnap({ signals: { ...helperSnap().signals, mute: sig(null, true, "uia-label") } }));
+	assert.equal(s.state.isMuted, undefined, "null value must not collapse to false");
+	assert.equal(s.availability?.isMuted, false, "available-but-null must render unknown, not off");
+});
