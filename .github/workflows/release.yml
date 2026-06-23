@@ -12,15 +12,27 @@ jobs:
   release:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: "24"
           cache: npm
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         with:
           workspaces: native
+      - name: Verify the tag matches the source versions
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          TAG3="$(echo "$TAG" | cut -d. -f1-3)"
+          PKG="$(node -p "require('./package.json').version")"
+          CARGO="$(sed -n 's/^version *= *"\(.*\)"/\1/p' native/Cargo.toml | head -1)"
+          echo "tag=$TAG (semver $TAG3)  package.json=$PKG  native/Cargo.toml=$CARGO"
+          rc=0
+          [ "$TAG3" = "$PKG" ]   || { echo "::error::tag semver $TAG3 does not match package.json $PKG"; rc=1; }
+          [ "$TAG3" = "$CARGO" ] || { echo "::error::tag semver $TAG3 does not match native/Cargo.toml $CARGO"; rc=1; }
+          exit $rc
       - run: npm ci
       - run: npm run proof
       - name: Derive plugin version from tag
@@ -67,10 +79,12 @@ jobs:
             "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash, $_.Name
           } | Set-Content dist/SHA256SUMS.txt
           Get-Content dist/SHA256SUMS.txt
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           files: |
             dist/*.streamDeckPlugin
             dist/SHA256SUMS.txt
           fail_on_unmatched_files: true
-          generate_release_notes: true
+          # release-please owns the GitHub Release and its changelog notes; this
+          # step only attaches the packaged assets, so it must not regenerate them.
+          generate_release_notes: false
