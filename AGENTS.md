@@ -29,11 +29,14 @@ version, updates `CHANGELOG.md`, and pushes a `vX.Y.Z` tag; the tag triggers
 Version sources:
 
 - `package.json` and `native/Cargo.toml` are the source of truth and are bumped together by
-  release-please. `release.yml` asserts the tag matches both before packing.
+  release-please. `release.yml` asserts the tag matches both before packing. release-please does
+  **not** update `native/Cargo.lock`, so the helper build must stay non-`--locked`: adding
+  `--locked` or `--frozen` would make every release-please PR fail until the lockfile is synced.
 - `manifest.json` `Version` is the 4-part Stream Deck format (`X.Y.Z.0`) and is **not** managed by
   release-please (Stream Deck rejects 3-part versions). It is derived from the tag at pack time
   (`streamdeck pack --version X.Y.Z.0`), so the committed value is only a dev default; do not rely on
   it for the shipped version.
 
-Pre-1.0 a `feat:` bumps the minor (`bump-minor-pre-major`); cutting `1.0.0` needs a `Release-As:
-1.0.0` footer on a commit.
+Pre-1.0, `feat:` bumps the minor by default and `bump-minor-pre-major` keeps a breaking change on
+the minor too (instead of jumping to 1.0.0), so cutting `1.0.0` needs a `Release-As: 1.0.0` footer
+on a commit.
