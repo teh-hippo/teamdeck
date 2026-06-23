@@ -101,17 +101,31 @@ fn map_camera(name: &str) -> Option<bool> {
 }
 
 fn name_by_id(automation: &UIAutomation, parent: &UIElement, aid: &str) -> Option<String> {
-    let cond = automation
-        .create_property_condition(UIProperty::AutomationId, Variant::from(aid), None)
-        .ok()?;
-    let el = parent.find_first(TreeScope::Descendants, &cond).ok()?;
-    el.get_name().ok()
+    find_first_id(automation, parent, aid)?.get_name().ok()
 }
 
 fn has_id(automation: &UIAutomation, parent: &UIElement, aid: &str) -> bool {
-    match automation.create_property_condition(UIProperty::AutomationId, Variant::from(aid), None) {
-        Ok(cond) => parent.find_first(TreeScope::Descendants, &cond).is_ok(),
-        Err(_) => false,
+    find_first_id(automation, parent, aid).is_some()
+}
+
+/// Reads a labelled control's value from its UIA Name via a label->bool mapper, returning an
+/// "unknown" signal when the control is absent or its label is unrecognised.
+fn read_signal(
+    automation: &UIAutomation,
+    meeting: &UIElement,
+    aid: &str,
+    map: fn(&str) -> Option<bool>,
+) -> Signal {
+    let Some(n) = name_by_id(automation, meeting, aid) else {
+        return Signal::unknown();
+    };
+    match map(&n) {
+        Some(v) => known(v, "uia-label"),
+        None => Signal {
+            value: None,
+            available: false,
+            source: format!("uia-label?:{n}"),
+        },
     }
 }
 
@@ -152,10 +166,7 @@ fn build_snapshot(automation: &UIAutomation) -> Snapshot {
     for w in &top {
         if w.get_classname().unwrap_or_default() == "TeamsWebView" {
             snap.teams_running = true;
-            if meeting.is_none()
-                && has_id(automation, w, "microphone-button")
-                && has_id(automation, w, "hangup-button")
-            {
+            if meeting.is_none() && is_meeting_window(automation, w) {
                 meeting = Some(w.clone());
             }
         }
@@ -174,26 +185,8 @@ fn build_snapshot(automation: &UIAutomation) -> Snapshot {
             pid: m.get_process_id().unwrap_or(0),
             name: m.get_name().unwrap_or_default(),
         });
-        if let Some(n) = name_by_id(automation, &m, "microphone-button") {
-            snap.signals.mute = match map_mute(&n) {
-                Some(v) => known(v, "uia-label"),
-                None => Signal {
-                    value: None,
-                    available: false,
-                    source: format!("uia-label?:{n}"),
-                },
-            };
-        }
-        if let Some(n) = name_by_id(automation, &m, "video-button") {
-            snap.signals.camera = match map_camera(&n) {
-                Some(v) => known(v, "uia-label"),
-                None => Signal {
-                    value: None,
-                    available: false,
-                    source: format!("uia-label?:{n}"),
-                },
-            };
-        }
+        snap.signals.mute = read_signal(automation, &m, "microphone-button", map_mute);
+        snap.signals.camera = read_signal(automation, &m, "video-button", map_camera);
         // hand: under the React flyout — not passively readable (left flyout-only/unknown).
         snap.signals.sharing = known(sharing, "uia-window");
     }
@@ -201,20 +194,20 @@ fn build_snapshot(automation: &UIAutomation) -> Snapshot {
     snap
 }
 
+/// Whether a top-level window is an active Teams meeting: a TeamsWebView that contains both the
+/// microphone and hangup buttons.
+fn is_meeting_window(automation: &UIAutomation, w: &UIElement) -> bool {
+    w.get_classname().unwrap_or_default() == "TeamsWebView"
+        && has_id(automation, w, "microphone-button")
+        && has_id(automation, w, "hangup-button")
+}
+
 /// Finds the active meeting window (TeamsWebView containing both microphone- and hangup-button).
 fn find_meeting_window(automation: &UIAutomation) -> Option<UIElement> {
     let root = automation.get_root_element().ok()?;
     let true_cond = automation.create_true_condition().ok()?;
     let top = root.find_all(TreeScope::Children, &true_cond).ok()?;
-    for w in &top {
-        if w.get_classname().unwrap_or_default() == "TeamsWebView"
-            && has_id(automation, w, "microphone-button")
-            && has_id(automation, w, "hangup-button")
-        {
-            return Some(w.clone());
-        }
-    }
-    None
+    top.into_iter().find(|w| is_meeting_window(automation, w))
 }
 
 fn find_first_id(automation: &UIAutomation, parent: &UIElement, aid: &str) -> Option<UIElement> {
