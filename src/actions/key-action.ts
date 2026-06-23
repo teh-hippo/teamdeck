@@ -12,7 +12,7 @@ import { type StatusSpec, selectStatusImage } from "./status";
 import { isActionable } from "./toggle";
 
 /** Selects the key image to render for a given Teams snapshot. */
-export type ImageFor = (snapshot: TeamsSnapshot) => string;
+type ImageFor = (snapshot: TeamsSnapshot) => string;
 
 /**
  * Shared base for Teams keys that render live state. Subscribes to the client and re-renders
