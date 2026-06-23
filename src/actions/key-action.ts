@@ -9,6 +9,7 @@ import {
 import { teams } from "../teams/client";
 import type { MeetingPermissions, TeamsSnapshot } from "../teams/types";
 import { type StatusSpec, selectStatusImage } from "./status";
+import { isActionable } from "./toggle";
 
 /** Selects the key image to render for a given Teams snapshot. */
 export type ImageFor = (snapshot: TeamsSnapshot) => string;
@@ -79,7 +80,7 @@ export abstract class MeetingKeyAction extends RenderingKeyAction {
 	}
 
 	override onKeyDown(): void {
-		if (teams.isActionable(this.#permission)) {
+		if (isActionable(teams.snapshot, this.#permission)) {
 			this.#command();
 		} else {
 			// Not actionable: ask the helper to recover, e.g. respawn if it died (no-op when healthy).

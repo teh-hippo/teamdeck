@@ -5,7 +5,7 @@ import streamDeck from "@elgato/streamdeck";
 
 import { HELPER_DISCONNECTED, type HelperSnapshot, mapHelperSnapshot } from "./helper-map";
 import { helperPath } from "./helper-path";
-import type { Listener, MeetingPermissions, ReactionType, TeamsSnapshot } from "./types";
+import type { Listener, ReactionType, TeamsSnapshot } from "./types";
 
 const MAX_RESTART_DELAY = 30_000;
 
@@ -71,11 +71,6 @@ export class HelperClient {
 		if (!this.#proc && !this.#stopped) {
 			this.#spawn();
 		}
-	}
-
-	isActionable(permission: keyof MeetingPermissions): boolean {
-		const snap = this.#snapshot;
-		return snap.connected && Boolean(snap.state.isInMeeting) && Boolean(snap.permissions[permission]);
 	}
 
 	toggleMute(): void {
