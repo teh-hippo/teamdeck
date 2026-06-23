@@ -1,93 +1,83 @@
 # TeamDeck
 
-Control Microsoft Teams meetings from an Elgato Stream Deck. TeamDeck mirrors your live meeting
-state on the keys and drives Teams from the deck.
+[![Licence: MIT](https://img.shields.io/badge/Licence-MIT-blue.svg)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/teh-hippo/teamdeck)](https://github.com/teh-hippo/teamdeck/releases)
 
-> Not affiliated with, or endorsed by, Microsoft or Elgato. "Microsoft Teams" and "Stream Deck"
-> are trademarks of their respective owners. TeamDeck is also unrelated to the resource management
-> product at teamdeck.io.
+TeamDeck is a Stream Deck plugin for controlling a Microsoft Teams meeting from an Elgato Stream Deck. The keys mirror your live meeting state and drive Teams from the deck. It is Windows-only and works with the new Microsoft Teams (work or school).
 
-## How it reads and controls Teams
+TeamDeck is not affiliated with or endorsed by Microsoft or Elgato. "Microsoft Teams" and "Stream Deck" are trademarks of their respective owners.
 
-The Teams third-party app API that earlier versions of TeamDeck used is being retired by Microsoft
-on 30 June 2026 (message centre MC1266901), with no replacement. TeamDeck now reads and controls
-Teams through Windows UI Automation, the accessibility layer that assistive tools use, so it keeps
-working after that date.
+> Earlier versions of TeamDeck used a Microsoft Teams third-party device and app integration. Microsoft is retiring that integration on 30 June 2026 (see [Connect to third-party devices in Microsoft Teams](https://support.microsoft.com/en-us/teams/calls-devices/connect-to-third-party-devices-in-microsoft-teams)). TeamDeck now reads and controls Teams through Windows UI Automation, so it keeps working after that date.
 
-A small native helper (`teamdeck-helper.exe`, built from [`native/`](native/)) inspects the new
-Teams meeting window to report live state, and actuates the meeting controls on a key press.
+## Features
 
-## Actions
+Live-state toggles mirror your real meeting state and grey out when you are not in a meeting:
 
-| Live-state toggles | One-press |
-| --- | --- |
-| Mute, Camera, Raise Hand | Leave, Applause, Laugh, Like, Love, Surprised |
+- Mute
+- Camera
+- Raise Hand
 
-Read-only status tiles: In Meeting and Screen Sharing. The toggles grey out when you are not in a
-meeting.
+One-press actions:
 
-## What works, and the trade-offs
+- Leave
+- Reactions: Applause, Laugh, Like, Love, Surprised
 
-- Mute, camera, raise hand, leave, the five reactions, in-meeting and screen-sharing detection are
-  supported.
-- Reading state never disturbs you: it inspects the meeting window in the background, even while
-  minimised. **Pressing a control briefly brings Teams to the foreground, then restores focus** to
-  the window you were using. It is a short flash, only on an explicit key press, and never moves the
-  mouse or types into other windows.
-- **Mute and camera state are read from the English Teams labels.** Other display languages may not
-  report state correctly until their labels are added (control still works).
-- **Raise-hand state is not shown.** Teams only exposes it behind the reactions flyout, so the key
-  raises and lowers your hand but does not light up.
-- TeamDeck depends on the structure of the Teams desktop window, which Microsoft can change in any
-  update. If a Teams update moves a control, a key may stop working until TeamDeck is updated.
+Read-only status tiles:
+
+- In Meeting
+- Screen Sharing
+
+Reading state is non-intrusive. The helper inspects the meeting window in the background, even while Teams is minimised, and never steals focus or moves the mouse. Pressing a control briefly brings Teams to the foreground and then restores focus to the window you were using, so you see a short flash only on an explicit key press.
+
+### Limitations
+
+- Mute and camera state are read from the English Teams labels. With other display languages the control still works, but the on or off state may not show until those labels are added.
+- Raise-hand state is not shown. Teams only exposes it behind the reactions flyout, so the key raises and lowers your hand without lighting up.
+- TeamDeck depends on the structure of the Teams desktop window, which Microsoft can change in any update. A Teams update could move a control until TeamDeck is updated.
 
 ## Requirements
 
 - The new Microsoft Teams (work or school) on Windows 10 or later.
-- The Elgato Stream Deck app 7.1 or later, and a Stream Deck device.
+- The Elgato Stream Deck app 7.1 or later, with a Stream Deck device.
 
-## Install
+## Installation
 
-Download the latest `.streamDeckPlugin` from the
-[Releases](https://github.com/teh-hippo/teamdeck/releases) page and double-click it. The Stream Deck
-app installs and runs it; no Node, build tools, or terminal are required.
+Download the latest `.streamDeckPlugin` from the [Releases page](https://github.com/teh-hippo/teamdeck/releases) and double-click it. The Stream Deck app installs and runs the plugin, so you do not need Node, build tools, or a terminal.
 
-The bundled helper is an unsigned executable, so Windows SmartScreen or your antivirus may warn the
-first time it runs. Each release publishes SHA256 checksums you can verify.
+The bundled helper (`teamdeck-helper.exe`) is an unsigned executable, so Windows SmartScreen or your antivirus may warn the first time it runs. Each release publishes SHA256 checksums so you can verify the download.
 
-## Setup
+## Configuration
 
-1. Install TeamDeck and drag the actions onto your keys.
-2. Join a Teams meeting. The toggles light up and mirror your state; one-press actions fire while a
-   meeting allows them.
+There is little to configure.
 
-No pairing or Teams settings change is required.
+1. Drag the TeamDeck actions onto your keys.
+2. Join a Teams meeting.
+
+The toggles light up and mirror your state, and the one-press actions fire while the meeting allows them. No pairing and no change to Teams settings is required.
+
+The plugin's Property Inspector shows a status line (helper running, Teams running, in a meeting) to help confirm everything is wired up.
 
 ## Building from source
 
-Building needs [Node.js](https://nodejs.org) and the [Rust toolchain](https://rustup.rs), on
-Windows (the Stream Deck CLI talks to the Windows Stream Deck app).
+Build and test on Windows, because the Stream Deck CLI talks to the Windows Stream Deck app. You need [Node.js](https://nodejs.org) and the [Rust toolchain](https://rustup.rs).
 
 ```powershell
 npm install
-npm run build         # the plugin bundle
-npm run build:helper  # the native helper -> sdPlugin/bin
-npm run proof         # typecheck, build, validate, icon check, unit tests
+npm run build         # build the plugin bundle
+npm run build:helper  # build the native helper into the plugin bin/
+npm run proof         # typecheck, lint, build, validate, icon check, unit tests
 streamdeck link io.github.teh-hippo.teamdeck.sdPlugin
 streamdeck restart io.github.teh-hippo.teamdeck
 ```
 
-`npm run pack` builds the helper and produces a distributable `.streamDeckPlugin`. A pre-commit hook
-runs `npm run secret-scan`; run `npm run hooks` to reinstall it.
+`npm run pack` builds the helper and produces a distributable `.streamDeckPlugin`. A pre-commit hook runs a secret scan, so keep Node on your PATH when committing.
 
 ## How it works
 
-The plugin is a single Node process that spawns the native helper
-([`native/`](native/), Rust + Windows UI Automation) and streams its meeting snapshots to every
-visible key, sending control commands back on a key press. The snapshot and command contract is in
-[`agent/specs/helper.md`](agent/specs/helper.md), and the architecture in
-[`agent/specs/architecture.md`](agent/specs/architecture.md).
+TeamDeck has two parts: a Stream Deck plugin written in Node and TypeScript, and a small native helper (`teamdeck-helper.exe`) written in Rust. The helper reads and controls Teams through Windows UI Automation, the Windows accessibility layer. It reports live meeting state to the keys and actuates the meeting controls on a key press.
+
+For the design detail, see [`agent/specs/architecture.md`](agent/specs/architecture.md) and [`agent/specs/helper.md`](agent/specs/helper.md).
 
 ## Licence
 
-[MIT](LICENSE).
+TeamDeck is released under the MIT Licence. See [LICENSE](LICENSE).
