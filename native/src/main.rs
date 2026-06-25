@@ -8,7 +8,9 @@ use std::io::{BufRead, Write};
 use std::sync::mpsc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use uiautomation::patterns::{UIExpandCollapsePattern, UIInvokePattern};
+use uiautomation::patterns::{
+    UIExpandCollapsePattern, UIInvokePattern, UILegacyIAccessiblePattern,
+};
 use uiautomation::types::{TreeScope, UIProperty};
 use uiautomation::variants::Variant;
 use uiautomation::{UIAutomation, UIElement};
@@ -288,18 +290,37 @@ fn invoke_element(el: &UIElement) -> bool {
     matches!(el.get_pattern::<UIInvokePattern>(), Ok(p) if p.invoke().is_ok())
 }
 
-fn invoke_id(automation: &UIAutomation, parent: &UIElement, aid: &str) -> bool {
-    find_first_id(automation, parent, aid)
-        .map(|el| invoke_element(&el))
-        .unwrap_or(false)
+/// Actuates a control with the fast, focus-free MSAA default action (`accDoDefaultAction`, ~0.3ms
+/// and provider-level). Falls back to `UIInvokePattern::invoke` (which blocks ~2s on Teams' Chromium
+/// control) only when the Legacy pattern is unavailable. The foreground is captured before and
+/// restored only if the actuation actually moved it -- so the common DoDefaultAction path pays no
+/// focus dance, while the Invoke fallback (which briefly foregrounds Teams) is still corrected, and
+/// the behaviour is invariant of which path runs.
+fn actuate(el: &UIElement) -> bool {
+    let prev = unsafe { GetForegroundWindow() };
+    let ok = if let Ok(p) = el.get_pattern::<UILegacyIAccessiblePattern>() {
+        p.do_default_action().is_ok() || invoke_element(el)
+    } else {
+        invoke_element(el)
+    };
+    if unsafe { GetForegroundWindow() } != prev {
+        restore_foreground(prev);
+    }
+    ok
 }
 
-/// Opens the React flyout, triggers an item (raise-hand or a reaction), then collapses it.
-fn invoke_in_flyout(automation: &UIAutomation, meeting: &UIElement, aid: &str) -> bool {
-    let react = match find_first_id(automation, meeting, "reaction-menu-button") {
-        Some(e) => e,
-        None => return false,
-    };
+/// Actuates a control found by AutomationId. Returns `None` when the control is absent -- the caller
+/// treats that as a possibly-stale meeting window and re-finds -- or `Some(success)` once it acted.
+fn act_id(automation: &UIAutomation, parent: &UIElement, aid: &str) -> Option<bool> {
+    find_first_id(automation, parent, aid).map(|el| actuate(&el))
+}
+
+/// Opens the React flyout, triggers an item (raise-hand or a reaction), then collapses it. Returns
+/// `None` when the React button is absent (stale window), else `Some(success)`. Expand/collapse and
+/// the item Invoke briefly foreground Teams, so the foreground is saved and restored here.
+fn invoke_in_flyout(automation: &UIAutomation, meeting: &UIElement, aid: &str) -> Option<bool> {
+    let react = find_first_id(automation, meeting, "reaction-menu-button")?;
+    let prev = unsafe { GetForegroundWindow() };
     let ec = react.get_pattern::<UIExpandCollapsePattern>().ok();
     if let Some(p) = &ec {
         let _ = p.expand();
@@ -316,19 +337,27 @@ fn invoke_in_flyout(automation: &UIAutomation, meeting: &UIElement, aid: &str) -
     if let Some(p) = &ec {
         let _ = p.collapse();
     }
-    ok
+    restore_foreground(prev);
+    Some(ok)
 }
 
-/// Restores `prev` as the foreground window (UIA Invoke briefly activates Teams).
+/// Restores `prev` as the foreground window (the Invoke fallback briefly activates Teams).
 fn restore_foreground(prev: HWND) {
     unsafe {
         let fg = GetForegroundWindow();
         let mut pid = 0u32;
         let fg_thread = GetWindowThreadProcessId(fg, Some(&mut pid));
         let cur = GetCurrentThreadId();
-        let _ = AttachThreadInput(cur, fg_thread, true);
+        // AttachThreadInput(cur, cur, ...) is invalid, so skip the attach when the helper itself is
+        // the foreground thread (only possible on a manual run, never for the plugin's spawned child).
+        let attach = fg_thread != cur;
+        if attach {
+            let _ = AttachThreadInput(cur, fg_thread, true);
+        }
         let _ = SetForegroundWindow(prev);
-        let _ = AttachThreadInput(cur, fg_thread, false);
+        if attach {
+            let _ = AttachThreadInput(cur, fg_thread, false);
+        }
     }
 }
 
@@ -343,26 +372,57 @@ fn react_id(kind: &str) -> Option<&'static str> {
     })
 }
 
-/// Executes a control verb via UIA, restoring the user's foreground window afterwards.
-fn do_command(automation: &UIAutomation, verb: &str, arg: Option<&str>) -> bool {
-    let meeting = match find_meeting_window(automation) {
-        Some(m) => m,
-        None => return false,
-    };
-    let prev = unsafe { GetForegroundWindow() };
-    let ok = match verb {
-        "toggle-mute" => invoke_id(automation, &meeting, "microphone-button"),
-        "toggle-camera" => invoke_id(automation, &meeting, "video-button"),
-        "leave" => invoke_id(automation, &meeting, "hangup-button"),
-        "raise-hand" => invoke_in_flyout(automation, &meeting, "raisehands-button"),
+/// What a command verb maps to, decided WITHOUT touching UIA so it is unit-testable. The
+/// no-double-actuate guarantee rests on this: `Noop` never actuates and never triggers a stale-cache
+/// retry, while `Toggle`/`Flyout` carry the exact AutomationId to act on.
+#[derive(Debug, PartialEq, Eq)]
+enum Action {
+    /// Actuate a single control by AutomationId (mute / camera / leave).
+    Toggle(&'static str),
+    /// Open the React flyout and actuate an item by AutomationId (raise-hand / reactions).
+    Flyout(&'static str),
+    /// Unknown verb or unrecognised reaction: do nothing, report ok:false, no retry.
+    Noop,
+}
+
+/// Maps a wire verb (and optional arg) to its control action, purely (no UIA). See `Action`.
+fn route(verb: &str, arg: Option<&str>) -> Action {
+    match verb {
+        "toggle-mute" => Action::Toggle("microphone-button"),
+        "toggle-camera" => Action::Toggle("video-button"),
+        "leave" => Action::Toggle("hangup-button"),
+        "raise-hand" => Action::Flyout("raisehands-button"),
         "react" => match arg.and_then(react_id) {
-            Some(id) => invoke_in_flyout(automation, &meeting, id),
-            None => false,
+            Some(id) => Action::Flyout(id),
+            None => Action::Noop,
         },
-        _ => false,
-    };
-    restore_foreground(prev);
-    ok
+        _ => Action::Noop,
+    }
+}
+
+/// Executes a routed verb against an already-resolved meeting window. Returns `None` only when the
+/// target control is absent (so the caller can re-find a possibly-stale meeting window), or
+/// `Some(success)` once a control acted (or the verb/arg was a no-op -- no retry, never double-acts).
+fn dispatch(
+    automation: &UIAutomation,
+    meeting: &UIElement,
+    verb: &str,
+    arg: Option<&str>,
+) -> Option<bool> {
+    match route(verb, arg) {
+        Action::Toggle(aid) => act_id(automation, meeting, aid),
+        Action::Flyout(aid) => invoke_in_flyout(automation, meeting, aid),
+        Action::Noop => Some(false),
+    }
+}
+
+/// Executes a control verb against the active meeting window. Returns false when there is no meeting
+/// or the target control is absent, else the control's actuation result.
+fn do_command(automation: &UIAutomation, verb: &str, arg: Option<&str>) -> bool {
+    match find_meeting_window(automation) {
+        Some(m) => dispatch(automation, &m, verb, arg).unwrap_or(false),
+        None => false,
+    }
 }
 
 fn emit_line(s: &str) -> bool {
@@ -499,6 +559,30 @@ mod tests {
         assert_eq!(react_id("surprised"), Some("surprised-button"));
         assert_eq!(react_id("applause"), Some("applause-button"));
         assert_eq!(react_id("nope"), None);
+    }
+
+    #[test]
+    fn route_maps_verbs_and_treats_unknowns_as_noop() {
+        assert_eq!(
+            route("toggle-mute", None),
+            Action::Toggle("microphone-button")
+        );
+        assert_eq!(route("toggle-camera", None), Action::Toggle("video-button"));
+        assert_eq!(route("leave", None), Action::Toggle("hangup-button"));
+        assert_eq!(
+            route("raise-hand", None),
+            Action::Flyout("raisehands-button")
+        );
+        assert_eq!(route("react", Some("like")), Action::Flyout("like-button"));
+        assert_eq!(
+            route("react", Some("surprised")),
+            Action::Flyout("surprised-button")
+        );
+        // Unknown verb and unrecognised reaction collapse to Noop: ok:false, and crucially no
+        // stale-cache retry (so a bad command can never be mistaken for a stale window or double-act).
+        assert_eq!(route("react", Some("nope")), Action::Noop);
+        assert_eq!(route("react", None), Action::Noop);
+        assert_eq!(route("bogus", None), Action::Noop);
     }
 
     #[test]
