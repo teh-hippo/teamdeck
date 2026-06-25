@@ -12,20 +12,14 @@ use uiautomation::events::{
     CustomEventHandlerFn, CustomPropertyChangedEventHandlerFn, UIEventHandler, UIEventType,
     UIPropertyChangedEventHandler,
 };
-use uiautomation::patterns::{
-    UIExpandCollapsePattern, UIInvokePattern, UILegacyIAccessiblePattern,
-};
+use uiautomation::patterns::{UIExpandCollapsePattern, UILegacyIAccessiblePattern};
 use uiautomation::types::{ExpandCollapseState, Handle, TreeScope, UIProperty};
 use uiautomation::variants::Variant;
 use uiautomation::{UIAutomation, UIElement};
 
 use windows::core::w;
-use windows::Win32::Foundation::{ERROR_SUCCESS, HWND};
+use windows::Win32::Foundation::ERROR_SUCCESS;
 use windows::Win32::System::Registry::{RegGetValueW, HKEY_CURRENT_USER, RRF_RT_REG_QWORD};
-use windows::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
-use windows::Win32::UI::WindowsAndMessaging::{
-    GetForegroundWindow, GetWindowThreadProcessId, SetForegroundWindow,
-};
 
 #[derive(Serialize)]
 struct Signal {
@@ -58,9 +52,7 @@ struct WindowInfo {
     name: String,
 }
 
-/// The snapshot contract emitted as one JSON line per tick. `teamsRunning`, `inMeeting` and
-/// `signals` drive the plugin; `schema`, `ts`, `window` and each signal's `source` are diagnostic
-/// fields for a human inspecting the helper, not consumed by the plugin's mapper.
+/// Snapshot contract: one JSON line per tick. `teamsRunning`/`inMeeting`/`signals` drive the plugin; the rest are diagnostic.
 #[derive(Serialize)]
 struct Snapshot {
     schema: u32,
@@ -88,14 +80,9 @@ fn known(value: bool, source: &str) -> Signal {
     }
 }
 
-/// Localisation seam: UI label fragments that reveal mic/camera state from a control's UIA Name
-/// (the action verb). Teams exposes mic/camera on-off state only as localised text, so supporting
-/// another display language means adding its verbs here -- the only change a new locale needs.
-/// Order matters: list more specific needles first (e.g. "unmute" before "mute", which it contains).
+/// Localisation seam: lower-case Name substrings that reveal mic/camera state. More specific needle first ("unmute" before "mute").
 struct StateLabel {
-    /// Lower-case substring to look for in the control's Name.
     needle: &'static str,
-    /// The boolean state that substring implies.
     value: bool,
 }
 
@@ -123,9 +110,7 @@ const CAMERA_LABELS: &[StateLabel] = &[
     },
 ];
 
-/// Resolves a control's boolean state from its (localised) Name via the first matching label,
-/// matched case-insensitively. Returns None when no known label matches, so the caller marks the
-/// control unknown rather than guessing.
+/// First label whose needle is in `name` (case-insensitive); None if none match.
 fn match_label(name: &str, labels: &[StateLabel]) -> Option<bool> {
     let n = name.to_lowercase();
     labels
@@ -144,11 +129,7 @@ fn map_camera(name: &str) -> Option<bool> {
     match_label(name, CAMERA_LABELS)
 }
 
-/// Camera-on state read from the OS, independent of Teams' display language: the per-app webcam
-/// privacy record. `LastUsedTimeStop == 0` means Microsoft Teams is currently capturing video
-/// (camera on); a non-zero FILETIME means capture stopped (camera off). Returns `None` when the
-/// record is missing or unreadable, so the caller falls back to the localised button label.
-/// `MSTeams_8wekyb3d8bbwe` is new Teams' fixed Microsoft Store identity.
+/// Language-independent camera read from Teams' OS webcam privacy record: LastUsedTimeStop==0 => camera on. None when unreadable.
 fn teams_webcam_in_use() -> Option<bool> {
     let mut value: u64 = 0;
     let mut size = std::mem::size_of::<u64>() as u32;
@@ -172,8 +153,7 @@ fn has_id(automation: &UIAutomation, parent: &UIElement, aid: &str) -> bool {
     find_first_id(automation, parent, aid).is_some()
 }
 
-/// Maps a control's (localised) UIA Name to a Signal: a recognised label gives a known value, an
-/// unrecognised one is tagged `uia-label?:<name>` so the plugin can surface it as a diagnostic.
+/// Maps a control's localised Name to a Signal; an unrecognised label is tagged `uia-label?:<name>` for diagnostics.
 fn label_signal(name: &str, map: fn(&str) -> Option<bool>) -> Signal {
     match map(name) {
         Some(v) => known(v, "uia-label"),
@@ -185,8 +165,7 @@ fn label_signal(name: &str, map: fn(&str) -> Option<bool>) -> Signal {
     }
 }
 
-/// A cache request that fetches each element's ClassName and Name in the same cross-process call as
-/// the enumeration, so the per-window reads in the top-level walk are local (no UIA round-trip each).
+/// Cache request prefetching ClassName+Name so the top-level walk reads them locally (no per-window round-trip).
 fn top_cache_request(
     automation: &UIAutomation,
 ) -> uiautomation::Result<uiautomation::core::UICacheRequest> {
@@ -196,12 +175,7 @@ fn top_cache_request(
     Ok(req)
 }
 
-/// Caches the active meeting window HWND plus the control elements found within it (mic / camera /
-/// hangup buttons). Both the snapshot reads and the toggle commands reuse these elements, turning a
-/// ~38ms `find_first` descendant tree search into a ~0.3ms property read / actuation. Each element is
-/// validated live on use -- a dead or detached Chromium element's `get_automation_id` returns Err, so
-/// a stale entry is dropped and re-found -- so the cache is never less reliable than a fresh search,
-/// only faster. Element entries are cleared whenever the HWND changes (a new / re-joined meeting).
+/// Caches the meeting HWND and its control elements (mic/camera/hangup) for reads and toggles; entries are validated live on use and cleared on HWND change.
 struct MeetingCache {
     hwnd: Option<isize>,
     elems: Vec<(&'static str, UIElement)>,
@@ -215,8 +189,7 @@ impl MeetingCache {
         }
     }
 
-    /// Points the cache at `hwnd`, dropping all cached elements when the window changes (so elements
-    /// from a previous meeting can never leak into a new one).
+    /// Points the cache at `hwnd`, clearing cached elements when the window changes.
     fn rebind(&mut self, hwnd: Option<isize>) {
         if self.hwnd != hwnd {
             self.hwnd = hwnd;
@@ -238,11 +211,7 @@ impl MeetingCache {
     }
 }
 
-/// Returns the meeting's control element for `aid`, preferring a live-validated cached element and
-/// otherwise finding it once and caching it. The cached element is trusted only if it still reports
-/// the expected AutomationId on a *current* (cross-process, non-cached) read -- a detached element
-/// errors there, so this both proves liveness and guards against an HWND-reuse mismatch. Returns
-/// `None` only when the control is genuinely absent from the meeting tree.
+/// The control element for `aid`: a cached element re-validated by a live AutomationId read (dropped + re-found if stale), else found and cached. None if absent.
 fn cached_elem(
     automation: &UIAutomation,
     cache: &mut MeetingCache,
@@ -260,8 +229,7 @@ fn cached_elem(
     Some(el)
 }
 
-/// Reads a cached control's UIA Name (used for the localised mute / camera labels), re-finding the
-/// element if the cached one went stale. `None` when the control is absent.
+/// A cached control's UIA Name (for the localised mute/camera labels), re-finding if stale. None if absent.
 fn cached_name(
     automation: &UIAutomation,
     cache: &mut MeetingCache,
@@ -292,11 +260,7 @@ fn build_snapshot(automation: &UIAutomation, cache: &mut MeetingCache) -> Snapsh
         },
     };
 
-    // Top-level pass for Teams-running (any TeamsWebView) and screen-sharing (a sibling "Sharing
-    // control bar" window). Both need this enumeration, so a cache request fetches ClassName + Name
-    // in one round-trip and the reads below are local. On a warm cache `locate_meeting` reuses the
-    // cached HWND and skips re-finding; only a cold tick pays a second top-level walk (inside
-    // `find_meeting_window`), which is rare (startup / post-invalidation).
+    // Top-level pass for Teams-running (any TeamsWebView) and screen-sharing (the sibling "Sharing control bar" window), cached in one round-trip.
     let mut sharing = false;
     if let (Ok(root), Ok(true_cond), Ok(req)) = (
         automation.get_root_element(),
@@ -319,25 +283,18 @@ fn build_snapshot(automation: &UIAutomation, cache: &mut MeetingCache) -> Snapsh
     }
 
     if let Some(m) = locate_meeting(automation, cache) {
-        // Liveness is confirmed by the mic read itself -- a live meeting always exposes
-        // microphone-button -- so there is no separate validation probe. If the cached window no
-        // longer has it (meeting ended / window reused), drop the cache and report not-in-meeting.
+        // The mic read is the liveness gate: present => in a meeting (else drop the cache and bail).
         match cached_name(automation, cache, &m, "microphone-button") {
             Some(mic) => {
-                // A live meeting always exposes microphone-button; on the warm path this mic read
-                // is the only liveness gate (vs the cold path's strict mic+hangup match) -- a small,
-                // intentional relaxation for speed. Being in a meeting implies Teams is running, so
-                // assert that invariant here regardless of whether the top-level walk above
-                // succeeded (it can transiently fail while the cached HWND still resolves).
                 snap.in_meeting = true;
+                // In a meeting implies Teams running, even if the top-level walk transiently missed it.
                 snap.teams_running = true;
                 snap.window = Some(WindowInfo {
                     pid: m.get_process_id().unwrap_or(0),
                     name: m.get_name().unwrap_or_default(),
                 });
                 snap.signals.mute = label_signal(&mic, map_mute);
-                // Prefer the OS webcam privacy signal (language-independent); fall back to the
-                // localised video-button label only when the per-app record is unavailable.
+                // Prefer the OS webcam signal; fall back to the localised video-button label.
                 snap.signals.camera = match teams_webcam_in_use() {
                     Some(on) => known(on, "os-webcam"),
                     None => match cached_name(automation, cache, &m, "video-button") {
@@ -345,7 +302,7 @@ fn build_snapshot(automation: &UIAutomation, cache: &mut MeetingCache) -> Snapsh
                         None => Signal::unknown(),
                     },
                 };
-                // hand: under the React flyout -- not passively readable (left flyout-only/unknown).
+                // hand state lives under the React flyout: not passively readable.
                 snap.signals.sharing = known(sharing, "uia-window");
             }
             None => cache.rebind(None),
@@ -355,17 +312,7 @@ fn build_snapshot(automation: &UIAutomation, cache: &mut MeetingCache) -> Snapsh
     snap
 }
 
-/// Resolves the active meeting window, preferring the cached HWND (one `ElementFromHandle` plus a
-/// cheap classname check, ~sub-ms vs the full enumeration) and otherwise re-finding it from scratch
-/// (the strict microphone+hangup match). Callers confirm it is still a live meeting via their own
-/// control reads (the snapshot's mic read, a command's button lookup), so no separate probe is run
-/// here. Updates `cache`, clearing it when the cached window is gone or no longer a TeamsWebView.
-///
-/// The cache is only ever seeded by `find_meeting_window`, so it can bind to the wrong window only if
-/// the OS recycles the meeting's HWND onto another *live* TeamsWebView meeting -- which needs HWND
-/// reuse plus concurrent meetings, out of scope under the single-meeting assumption. The common
-/// recycle (onto the main Teams window, which has no microphone-button) self-heals: the caller's mic
-/// read fails and clears the cache.
+/// Resolves the meeting window, preferring the cached HWND over a full re-find (`find_meeting_window`, the cache's only seed). Clears the cache when the window is gone or not a TeamsWebView; a wrong-window bind self-heals via the caller's mic read.
 fn locate_meeting(automation: &UIAutomation, cache: &mut MeetingCache) -> Option<UIElement> {
     if let Some(h) = cache.hwnd {
         if let Ok(el) = automation.element_from_handle(Handle::from(h)) {
@@ -384,8 +331,7 @@ fn locate_meeting(automation: &UIAutomation, cache: &mut MeetingCache) -> Option
     Some(m)
 }
 
-/// Whether a top-level window is an active Teams meeting: a TeamsWebView that contains both the
-/// microphone and hangup buttons.
+/// A top-level TeamsWebView containing both microphone- and hangup-button (an active meeting).
 fn is_meeting_window(automation: &UIAutomation, w: &UIElement) -> bool {
     w.get_classname().unwrap_or_default() == "TeamsWebView"
         && has_id(automation, w, "microphone-button")
@@ -407,34 +353,12 @@ fn find_first_id(automation: &UIAutomation, parent: &UIElement, aid: &str) -> Op
     parent.find_first(TreeScope::Descendants, &cond).ok()
 }
 
-fn invoke_element(el: &UIElement) -> bool {
-    matches!(el.get_pattern::<UIInvokePattern>(), Ok(p) if p.invoke().is_ok())
-}
-
-/// Actuates a control with the fast, focus-free MSAA default action (`accDoDefaultAction`, ~0.3ms
-/// and provider-level). Falls back to `UIInvokePattern::invoke` (which blocks ~2s on Teams' Chromium
-/// control) only when the Legacy pattern is unavailable. The foreground is captured before and
-/// restored only if the actuation actually moved it -- so the common DoDefaultAction path pays no
-/// focus dance, while the Invoke fallback (which briefly foregrounds Teams) is still corrected, and
-/// the behaviour is invariant of which path runs.
+/// Actuates a control via the fast, focus-free MSAA default action (`accDoDefaultAction`); no focus/foreground change and no Invoke fallback needed (verified live across every control exercised; leave/hangup shares the same path).
 fn actuate(el: &UIElement) -> bool {
-    let prev = unsafe { GetForegroundWindow() };
-    let ok = if let Ok(p) = el.get_pattern::<UILegacyIAccessiblePattern>() {
-        p.do_default_action().is_ok() || invoke_element(el)
-    } else {
-        invoke_element(el)
-    };
-    if unsafe { GetForegroundWindow() } != prev {
-        restore_foreground(prev);
-    }
-    ok
+    matches!(el.get_pattern::<UILegacyIAccessiblePattern>(), Ok(p) if p.do_default_action().is_ok())
 }
 
-/// Runs a flyout action (raise-hand / reaction) off the serve loop, on a short-lived worker with its
-/// OWN `UIAutomation`. The worker registers NO UIA event handlers (only the main thread mutates
-/// handlers -- a UI Automation threading requirement), so `expand()` -- which has been seen to block
-/// up to ~2s on some Teams builds -- can never freeze the snapshot stream. Resolves the meeting from
-/// the cached HWND (falling back to a fresh search) and returns whether the inner item actuated.
+/// Runs a flyout action on a short-lived worker (own `UIAutomation`, no event handlers) so a slow `expand()` can't freeze the snapshot stream. Resolves the meeting from the cached HWND.
 fn run_flyout_worker(hwnd: Option<isize>, aid: &str) -> bool {
     let Ok(automation) = UIAutomation::new() else {
         return false;
@@ -449,14 +373,11 @@ fn run_flyout_worker(hwnd: Option<isize>, aid: &str) -> bool {
     }
 }
 
-/// Opens the React flyout, actuates the item by AutomationId with the fast MSAA default action, then
-/// closes the flyout deterministically. Saves/restores the foreground (the Invoke fallback inside
-/// `actuate` can briefly foreground Teams).
+/// Opens the React flyout, actuates the item by AutomationId, then closes it. Focus-free throughout.
 fn run_flyout(automation: &UIAutomation, meeting: &UIElement, aid: &str) -> bool {
     let Some(react) = find_first_id(automation, meeting, "reaction-menu-button") else {
         return false;
     };
-    let prev = unsafe { GetForegroundWindow() };
     let ec = react.get_pattern::<UIExpandCollapsePattern>().ok();
     if let Some(p) = &ec {
         let _ = p.expand();
@@ -474,20 +395,10 @@ fn run_flyout(automation: &UIAutomation, meeting: &UIElement, aid: &str) -> bool
         }
     }
     close_flyout(automation, meeting, &react, ec.as_ref());
-    if unsafe { GetForegroundWindow() } != prev {
-        restore_foreground(prev);
-    }
     ok
 }
 
-/// Closes the React flyout so the next command never lands on an open menu (a left-open flyout makes
-/// `microphone-button`/`hangup-button` transiently leave the tree and breaks meeting detection).
-/// `collapse()` can report `Err` even when it succeeds, so the close is verified via
-/// `ExpandCollapseState`; only a confirmed-still-`Expanded` menu is toggled shut via the React button
-/// (re-invoking an already-closed menu would re-open it). Finally waits up to ~500ms for the control
-/// bar (`microphone-button`) to return, so the command never returns while the flyout still disrupts
-/// the tree. (The exact close mechanism is pending solo-meeting verification; the mic-reappear wait is
-/// the backstop that holds regardless.)
+/// Closes the React flyout deterministically: `collapse()`, and only if still Expanded re-actuate the React button (re-invoking an already-closed menu would re-open it); then wait up to ~500ms for microphone-button to return so the disrupted tree never leaks into the next command.
 fn close_flyout(
     automation: &UIAutomation,
     meeting: &UIElement,
@@ -510,26 +421,6 @@ fn close_flyout(
     }
 }
 
-/// Restores `prev` as the foreground window (the Invoke fallback briefly activates Teams).
-fn restore_foreground(prev: HWND) {
-    unsafe {
-        let fg = GetForegroundWindow();
-        let mut pid = 0u32;
-        let fg_thread = GetWindowThreadProcessId(fg, Some(&mut pid));
-        let cur = GetCurrentThreadId();
-        // AttachThreadInput(cur, cur, ...) is invalid, so skip the attach when the helper itself is
-        // the foreground thread (only possible on a manual run, never for the plugin's spawned child).
-        let attach = fg_thread != cur;
-        if attach {
-            let _ = AttachThreadInput(cur, fg_thread, true);
-        }
-        let _ = SetForegroundWindow(prev);
-        if attach {
-            let _ = AttachThreadInput(cur, fg_thread, false);
-        }
-    }
-}
-
 fn react_id(kind: &str) -> Option<&'static str> {
     Some(match kind {
         "like" => "like-button",
@@ -541,9 +432,7 @@ fn react_id(kind: &str) -> Option<&'static str> {
     })
 }
 
-/// What a command verb maps to, decided WITHOUT touching UIA so it is unit-testable. The
-/// no-double-actuate guarantee rests on this: `Noop` never actuates and never triggers a stale-cache
-/// retry, while `Toggle`/`Flyout` carry the exact AutomationId to act on.
+/// What a command verb maps to, decided without touching UIA (unit-testable). `Noop` never actuates.
 #[derive(Debug, PartialEq, Eq)]
 enum Action {
     /// Actuate a single control by AutomationId (mute / camera / leave).
@@ -569,26 +458,19 @@ fn route(verb: &str, arg: Option<&str>) -> Action {
     }
 }
 
-/// Actuates a single toggle control (mute / camera / leave) on the cached meeting window, re-finding
-/// the meeting once if the control is absent (stale cache after a rejoin or control-bar rebuild) so a
-/// key press is never silently dropped. Fast (DoDefaultAction ~0.3ms), so it runs inline on the serve
-/// loop; only the flyout is offloaded to a worker.
+/// Actuates a toggle control (mute/camera/leave) on the cached window, re-finding once if it's absent so a press is never silently dropped. Runs inline (DoDefaultAction is fast).
 fn act_toggle(automation: &UIAutomation, cache: &mut MeetingCache, aid: &'static str) -> bool {
     if let Some(m) = locate_meeting(automation, cache) {
         if let Some(el) = cached_elem(automation, cache, &m, aid) {
             let ok = actuate(&el);
-            // A cached element that validated yet still failed to actuate is suspect: drop it so the
-            // NEXT press re-finds a fresh one. Deliberately do not retry within this call -- `actuate`
-            // can report false after a real side effect (its `invoke` fallback), and a retry could
-            // double-toggle. The 1s tick / next snapshot also re-warms the cache.
+            // Validated element that still didn't actuate (transient rebuild): drop it so the next press/tick re-finds; no in-call retry.
             if !ok {
                 cache.drop_elem(aid);
             }
             return ok;
         }
     }
-    // The control was absent from the (possibly stale) cached window: drop the window cache and retry
-    // once against a freshly-found meeting, so a rejoin or HWND change never silently drops a press.
+    // Control absent from the cached window: drop the cache and retry once against a fresh meeting.
     cache.rebind(None);
     match locate_meeting(automation, cache) {
         Some(m) => cached_elem(automation, cache, &m, aid)
@@ -598,31 +480,22 @@ fn act_toggle(automation: &UIAutomation, cache: &mut MeetingCache, aid: &'static
     }
 }
 
-/// Messages the serve loop multiplexes: a command line from stdin, a "state may have changed" ping
-/// from a UIA event handler, and a result line a flyout worker funnels back (so the main thread stays
-/// the sole stdout writer).
+/// Messages the serve loop multiplexes: a stdin command, a state-changed ping from a UIA handler, and a worker's result line.
 enum Msg {
     Cmd(String),
     Ping,
     Result(String),
-    /// stdin reached EOF (the parent closed it / exited): the loop exits so the helper never outlives
-    /// its parent. Needed because the UIA handlers now hold `Sender` clones, so stdin EOF alone no
-    /// longer disconnects the channel.
+    /// stdin EOF (parent gone): exit. Needed because UIA handlers hold their own `Sender` clones, so dropping the reader's tx no longer disconnects the channel.
     Eof,
 }
 
-// Handler closures capture a `Sender<Msg>` and run on concurrent MTA callback threads, but the crate
-// stores them as `Box<dyn Fn>` with no Send/Sync bound, so this invariant is unchecked at the
-// registration sites. Lock it here: a future capture of a `!Sync` value (an `Rc`, `Cell`, a
-// `UIElement`, ...) into a handler then breaks the build instead of becoming silent data-race UB.
+// Compile-time assert that the handler-captured `Sender<Msg>` is Send+Sync (the crate stores handlers with no such bound).
 const _: fn() = || {
     fn assert_send_sync<T: Send + Sync>() {}
     assert_send_sync::<Sender<Msg>>();
 };
 
-/// A live subtree `PropertyChanged(Name)` registration bound to a specific meeting window. Held on the
-/// main thread (the handler and element are `!Send`) for the window's lifetime and removed by identity
-/// when the window changes -- so re-registration never disturbs the long-lived root window handlers.
+/// A live subtree PropertyChanged(Name) registration bound to one meeting window; removed by identity when the window changes.
 struct NameReg {
     handler: UIPropertyChangedEventHandler,
     window: UIElement,
@@ -639,12 +512,7 @@ fn window_alive(automation: &UIAutomation, hwnd: isize) -> bool {
         .unwrap_or(false)
 }
 
-/// Registers the root-scoped window open/close handlers -- latency shorteners for Teams start/stop,
-/// meeting join/leave and the sharing bar. Registered once for the serve lifetime; the returned
-/// wrappers and root element must be kept alive while serving. Opens are filtered (by cached
-/// class/name) to the windows we care about so unrelated desktop windows don't each nudge a rebuild;
-/// closes always ping (a closing window's cache may be empty and a meeting-end must not be missed --
-/// worst case the 1s tick catches it anyway). Handlers only `tx.send`; they never touch UIA further.
+/// Root window open/close handlers (latency shorteners), kept alive for the serve lifetime. Opens filtered to relevant windows; closes always ping; handlers only send.
 fn register_window_handlers(
     automation: &UIAutomation,
     tx: &Sender<Msg>,
@@ -668,9 +536,7 @@ fn register_window_handlers(
     let closed: UIEventHandler = (Box::new({
         let tx = tx.clone();
         move |e: &UIElement, _ev| {
-            // A closing window's cached classname can be empty, so ping then too (it may be the
-            // meeting / sharing window); otherwise only the windows we track, so unrelated desktop
-            // closes don't nudge a rebuild.
+            // A closing window's cached classname can be empty, so ping then too; else only tracked windows.
             let cls = e.get_cached_classname().unwrap_or_default();
             let name = e.get_cached_name().unwrap_or_default();
             if cls.is_empty() || cls == "TeamsWebView" || name.starts_with("Sharing control bar") {
@@ -701,10 +567,7 @@ fn register_window_handlers(
     Some((opened, closed, root))
 }
 
-/// Registers a subtree `PropertyChanged(Name)` handler on the meeting window `hwnd`. A cache request
-/// prefetches AutomationId so the handler filters to mic/video via `get_cached_automation_id()`
-/// with no UIA round-trip per event (a live read per Name change would itself be the firehose). The
-/// handler does nothing but ping -- it never touches UIA further nor moves a `!Send` value off-thread.
+/// Subtree PropertyChanged(Name) handler on the meeting window; prefetches AutomationId so it filters to mic/video with no per-event UIA read. Only pings.
 fn register_name_handler(
     automation: &UIAutomation,
     hwnd: isize,
@@ -740,11 +603,7 @@ fn register_name_handler(
     })
 }
 
-/// Keeps the meeting-bound Name handler attached to the live meeting window, decoupled from the
-/// per-snapshot `inMeeting` state: it (re)binds when the window changes and tears down only when the
-/// window is gone -- crucially NOT when the control bar merely auto-hides (the window survives, so the
-/// handler is kept and fires the moment the bar's mic button returns). Targeted removal leaves the
-/// long-lived root window handlers untouched.
+/// Keeps the Name handler bound to the live meeting window, decoupled from `inMeeting`: rebinds on window change, tears down only when the window is gone (not when the control bar auto-hides).
 fn reconcile_name_handler(
     automation: &UIAutomation,
     name_reg: &mut Option<NameReg>,
@@ -760,10 +619,7 @@ fn reconcile_name_handler(
             .map(|r| r.hwnd)
             .filter(|&h| window_alive(automation, h))
     };
-    // Short-circuit on HWND identity. Two tick-covered edges are accepted here: an OS HWND reuse onto
-    // a *new* live meeting would skip the rebind (out of scope, same as `locate_meeting`'s cache), and
-    // an in_meeting tick where `get_native_window_handle` failed (cache None) binds no handler that
-    // tick; both self-heal on a later tick.
+    // Short-circuit on HWND identity; the rare HWND-reuse and cache-None edges self-heal on a later tick.
     if name_reg.as_ref().map(|r| r.hwnd) == desired {
         return;
     }
@@ -781,14 +637,12 @@ fn emit_line(s: &str) -> bool {
     writeln!(h, "{s}").and_then(|_| h.flush()).is_ok()
 }
 
-/// Builds the `{"type":"result",...}` line for a command. Reused by the inline toggle path and the
-/// flyout worker so the wire result contract has a single source of truth (keys serialise sorted).
+/// Builds the `{"type":"result",...}` line; single source of truth for the wire result contract.
 fn result_line(verb: &str, arg: Option<&str>, ok: bool) -> String {
     serde_json::json!({ "type": "result", "cmd": verb, "arg": arg, "ok": ok }).to_string()
 }
 
-/// Builds and emits one snapshot line, then reconciles the meeting-bound Name handler against the
-/// freshly-resolved window. Returns false only when the stdout pipe is broken (parent gone).
+/// Emits one snapshot line and reconciles the Name handler. False only when the stdout pipe is broken.
 fn emit_snapshot(
     automation: &UIAutomation,
     cache: &mut MeetingCache,
@@ -811,8 +665,7 @@ fn should_emit(dirty: bool, since_emit: Duration, debounce: Duration) -> bool {
     dirty && since_emit >= debounce
 }
 
-/// How long the loop waits for the next message: while a snapshot is pending, only the remaining
-/// debounce (so a pending emit can't oversleep); otherwise the full idle tick.
+/// How long to wait for the next message: remaining debounce while a snapshot is pending, else the full idle tick.
 fn loop_wait(dirty: bool, since_emit: Duration, debounce: Duration, tick: Duration) -> Duration {
     if dirty {
         debounce.saturating_sub(since_emit)
@@ -821,14 +674,7 @@ fn loop_wait(dirty: bool, since_emit: Duration, debounce: Duration, tick: Durati
     }
 }
 
-/// Persistent service: streams snapshot JSON (`{"type":"snapshot",...}`) and command results
-/// (`{"type":"result",...}`) on stdout, and reads command JSON on stdin. State reads are
-/// event-driven -- a subtree `PropertyChanged(Name)` handler (mic/video) plus root window open/close
-/// handlers ping the loop so a change shows in ~70-100ms -- layered over a slow ~1s safety tick that
-/// bounds worst-case staleness and self-heals any missed/never-fired event (the plugin has no
-/// snapshot watchdog). Snapshots are debounced to at most one per ~150ms so an event or window burst
-/// (e.g. the control-bar rebuild) cannot saturate the loop. Exits when stdin closes (channel
-/// disconnects) or the stdout pipe breaks, so it never outlives the plugin that spawned it.
+/// Persistent service: streams snapshot + result JSON on stdout, reads command JSON on stdin. Event-driven (Name + window handlers, ~70-100ms) over a 1s safety tick, snapshots debounced to ~150ms. Exits when stdin or stdout closes.
 fn serve(automation: &UIAutomation) {
     let (tx, rx) = mpsc::channel::<Msg>();
     {
@@ -842,15 +688,12 @@ fn serve(automation: &UIAutomation) {
                             break;
                         }
                     }
-                    // A closed Windows pipe yields a repeating read error (not a clean EOF), so stop
-                    // on it; only a non-UTF-8 line is skipped (preserving the shipped invalid-line
-                    // tolerance) -- a blanket `continue` would busy-loop on a broken pipe.
+                    // A broken Windows pipe yields a repeating read error, not clean EOF: stop on it; skip only non-UTF-8 lines.
                     Err(e) if e.kind() == ErrorKind::InvalidData => continue,
                     Err(_) => break,
                 }
             }
-            // stdin EOF (parent closed it / exited): tell the loop to exit. A dropped `tx` alone no
-            // longer disconnects the channel (the UIA handlers hold their own clones).
+            // stdin EOF (parent gone): tell the loop to exit (handlers hold their own tx clones).
             let _ = tx.send(Msg::Eof);
         });
     }
@@ -859,8 +702,7 @@ fn serve(automation: &UIAutomation) {
     let mut cache = MeetingCache::new();
     // The meeting-bound Name handler, rebound as the meeting window changes.
     let mut name_reg: Option<NameReg> = None;
-    // Long-lived root window handlers (latency shorteners); kept alive for the serve lifetime. On
-    // failure the loop still runs on the 1s tick + Name handler, but surface it for the plugin log.
+    // Long-lived root window handlers; on failure the loop still runs on the tick + Name handler.
     let window_reg = register_window_handlers(automation, &tx);
     if window_reg.is_none() {
         eprintln!("teamdeck-helper: window event handlers failed to register; relying on the tick");
@@ -886,8 +728,7 @@ fn serve(automation: &UIAutomation) {
         match rx.recv_timeout(wait) {
             Ok(Msg::Cmd(line)) => match handle_command(automation, &mut cache, &line, &tx) {
                 Handled::Stop => break, // stdout pipe broken: parent gone.
-                // A flyout returns snapshot=false: its worker emits the post-settle snapshot via
-                // Msg::Result, so the loop must not snapshot mid-rebuild (avoids an inMeeting flicker).
+                // Flyout: its worker emits the post-settle snapshot, so don't snapshot mid-rebuild here.
                 Handled::Go { snapshot } => {
                     if snapshot {
                         dirty = true;
@@ -914,18 +755,13 @@ fn serve(automation: &UIAutomation) {
 
 /// Outcome of handling one command line, returned to the serve loop.
 enum Handled {
-    /// Keep serving. `snapshot` requests an immediate post-command snapshot -- true for the inline
-    /// toggle/no-op paths, false for a flyout (its worker emits its own snapshot once the control bar
-    /// has settled, via `Msg::Result`, so the loop must not snapshot mid-rebuild).
+    /// Keep serving; `snapshot` requests an immediate post-command snapshot (true for inline toggle/noop, false for flyout).
     Go { snapshot: bool },
     /// The stdout pipe broke (parent gone): stop serving.
     Stop,
 }
 
-/// Parses one command line and acts. Toggles (mute/camera/leave) run inline (fast DoDefaultAction)
-/// and emit their result immediately; flyout actions (raise-hand/reactions) run on a worker that
-/// funnels its `{"type":"result",...}` back via `Msg::Result`, so the main thread stays the sole
-/// stdout writer and a slow `expand()` never freezes the stream.
+/// Parses one command line and acts: toggles run inline and emit immediately; flyout actions run on a worker that funnels its result via `Msg::Result`.
 fn handle_command(
     automation: &UIAutomation,
     cache: &mut MeetingCache,
