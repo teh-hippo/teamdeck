@@ -119,16 +119,6 @@ fn match_label(name: &str, labels: &[StateLabel]) -> Option<bool> {
         .map(|l| l.value)
 }
 
-/// microphone-button Name is the action verb: "Unmute mic" => muted, "Mute mic" => unmuted.
-fn map_mute(name: &str) -> Option<bool> {
-    match_label(name, MUTE_LABELS)
-}
-
-/// video-button Name: "Turn camera off" => camera on, "Turn camera on" => off.
-fn map_camera(name: &str) -> Option<bool> {
-    match_label(name, CAMERA_LABELS)
-}
-
 /// Language-independent camera read from Teams' OS webcam privacy record: LastUsedTimeStop==0 => camera on. None when unreadable.
 fn teams_webcam_in_use() -> Option<bool> {
     let mut value: u64 = 0;
@@ -154,8 +144,8 @@ fn has_id(automation: &UIAutomation, parent: &UIElement, aid: &str) -> bool {
 }
 
 /// Maps a control's localised Name to a Signal; an unrecognised label is tagged `uia-label?:<name>` for diagnostics.
-fn label_signal(name: &str, map: fn(&str) -> Option<bool>) -> Signal {
-    match map(name) {
+fn label_signal(name: &str, labels: &[StateLabel]) -> Signal {
+    match match_label(name, labels) {
         Some(v) => known(v, "uia-label"),
         None => Signal {
             value: None,
@@ -293,12 +283,12 @@ fn build_snapshot(automation: &UIAutomation, cache: &mut MeetingCache) -> Snapsh
                     pid: m.get_process_id().unwrap_or(0),
                     name: m.get_name().unwrap_or_default(),
                 });
-                snap.signals.mute = label_signal(&mic, map_mute);
+                snap.signals.mute = label_signal(&mic, MUTE_LABELS);
                 // Prefer the OS webcam signal; fall back to the localised video-button label.
                 snap.signals.camera = match teams_webcam_in_use() {
                     Some(on) => known(on, "os-webcam"),
                     None => match cached_name(automation, cache, &m, "video-button") {
-                        Some(n) => label_signal(&n, map_camera),
+                        Some(n) => label_signal(&n, CAMERA_LABELS),
                         None => Signal::unknown(),
                     },
                 };
@@ -518,9 +508,7 @@ fn register_window_handlers(
     tx: &Sender<Msg>,
 ) -> Option<(UIEventHandler, UIEventHandler, UIElement)> {
     let root = automation.get_root_element().ok()?;
-    let req = automation.create_cache_request().ok()?;
-    req.add_property(UIProperty::ClassName).ok()?;
-    req.add_property(UIProperty::Name).ok()?;
+    let req = top_cache_request(automation).ok()?;
     let opened: UIEventHandler = (Box::new({
         let tx = tx.clone();
         move |e: &UIElement, _ev| {
@@ -832,40 +820,48 @@ mod tests {
     use super::*;
 
     #[test]
-    fn map_mute_reads_the_action_verb() {
-        assert_eq!(map_mute("Unmute mic"), Some(true), "Unmute => muted");
-        assert_eq!(map_mute("Mute mic"), Some(false), "Mute => unmuted");
-        assert_eq!(map_mute("Microphone"), None);
+    fn mute_label_reads_the_action_verb() {
+        assert_eq!(
+            match_label("Unmute mic", MUTE_LABELS),
+            Some(true),
+            "Unmute => muted"
+        );
+        assert_eq!(
+            match_label("Mute mic", MUTE_LABELS),
+            Some(false),
+            "Mute => unmuted"
+        );
+        assert_eq!(match_label("Microphone", MUTE_LABELS), None);
     }
 
     #[test]
     fn label_matching_is_case_insensitive_and_order_aware() {
         // The seam matches case-insensitively, so a localised label in any casing still resolves.
-        assert_eq!(map_mute("UNMUTE MIC"), Some(true));
-        assert_eq!(map_mute("unmute mic"), Some(true));
+        assert_eq!(match_label("UNMUTE MIC", MUTE_LABELS), Some(true));
+        assert_eq!(match_label("unmute mic", MUTE_LABELS), Some(true));
         // "unmute" contains "mute": the more specific needle must win, never collapse to unmuted.
         assert_eq!(
-            map_mute("Unmute"),
+            match_label("Unmute", MUTE_LABELS),
             Some(true),
             "must not match the 'mute' needle first"
         );
-        assert_eq!(map_camera("turn camera on"), Some(false));
+        assert_eq!(match_label("turn camera on", CAMERA_LABELS), Some(false));
     }
 
     #[test]
-    fn map_camera_is_case_insensitive() {
+    fn camera_label_is_case_insensitive() {
         assert_eq!(
-            map_camera("Turn camera off"),
+            match_label("Turn camera off", CAMERA_LABELS),
             Some(true),
             "off label => camera on"
         );
-        assert_eq!(map_camera("TURN CAMERA OFF"), Some(true));
+        assert_eq!(match_label("TURN CAMERA OFF", CAMERA_LABELS), Some(true));
         assert_eq!(
-            map_camera("Turn camera on"),
+            match_label("Turn camera on", CAMERA_LABELS),
             Some(false),
             "on label => camera off"
         );
-        assert_eq!(map_camera("No control here"), None);
+        assert_eq!(match_label("No control here", CAMERA_LABELS), None);
     }
 
     #[test]
