@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.3](https://github.com/teh-hippo/teamdeck/compare/v0.5.2...v0.5.3) (2026-06-25)
+
+
+### Bug Fixes
+
+* **ui:** escape diagnostic text before rendering it in the property inspector ([0cd80b1](https://github.com/teh-hippo/teamdeck/commit/0cd80b1ae1c522b4b91f2e1a25fc69396256496c))
+
 ## [0.5.2](https://github.com/teh-hippo/teamdeck/compare/v0.5.1...v0.5.2) (2026-06-25)
 
 
