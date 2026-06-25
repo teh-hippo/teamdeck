@@ -52,7 +52,12 @@
 
 			function render(p) {
 				if (!p) return;
-				const row = (cls, label) => '<span class="dot ' + cls + '"></span>' + label;
+				const esc = (s) =>
+					String(s).replace(
+						/[&<>"']/g,
+						(c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
+					);
+				const row = (cls, label) => '<span class="dot ' + cls + '"></span>' + esc(label);
 				let line;
 				if (!p.helperRunning) line = row("bad", "Helper not running");
 				else if (!p.teamsRunning) line = row("warn", "Teams not running");
