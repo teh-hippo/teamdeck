@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.0](https://github.com/teh-hippo/teamdeck/compare/v0.3.0...v0.4.0) (2026-06-25)
+
+
+### Features
+
+* **helper:** actuate Teams controls via the MSAA default action ([95b1106](https://github.com/teh-hippo/teamdeck/commit/95b110680068f7b491455ab1606299695cf61898))
+
+
+### Performance Improvements
+
+* **helper:** cache the meeting window and wake the serve loop on commands ([5873e48](https://github.com/teh-hippo/teamdeck/commit/5873e48b968e5b230159628f247f7e757717e801))
+
 ## [0.3.0](https://github.com/teh-hippo/teamdeck/compare/v0.2.1...v0.3.0) (2026-06-25)
 
 
