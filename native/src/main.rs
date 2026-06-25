@@ -80,27 +80,60 @@ fn known(value: bool, source: &str) -> Signal {
     }
 }
 
+/// Localisation seam: UI label fragments that reveal mic/camera state from a control's UIA Name
+/// (the action verb). Teams exposes mic/camera on-off state only as localised text, so supporting
+/// another display language means adding its verbs here -- the only change a new locale needs.
+/// Order matters: list more specific needles first (e.g. "unmute" before "mute", which it contains).
+struct StateLabel {
+    /// Lower-case substring to look for in the control's Name.
+    needle: &'static str,
+    /// The boolean state that substring implies.
+    value: bool,
+}
+
+/// Mic button Name is the action verb: an "unmute" verb means you are muted; "mute" means live.
+const MUTE_LABELS: &[StateLabel] = &[
+    StateLabel {
+        needle: "unmute",
+        value: true,
+    },
+    StateLabel {
+        needle: "mute",
+        value: false,
+    },
+];
+
+/// Video button Name: a "camera off" verb means the camera is on, and vice versa.
+const CAMERA_LABELS: &[StateLabel] = &[
+    StateLabel {
+        needle: "camera off",
+        value: true,
+    },
+    StateLabel {
+        needle: "camera on",
+        value: false,
+    },
+];
+
+/// Resolves a control's boolean state from its (localised) Name via the first matching label,
+/// matched case-insensitively. Returns None when no known label matches, so the caller marks the
+/// control unknown rather than guessing.
+fn match_label(name: &str, labels: &[StateLabel]) -> Option<bool> {
+    let n = name.to_lowercase();
+    labels
+        .iter()
+        .find(|l| n.contains(l.needle))
+        .map(|l| l.value)
+}
+
 /// microphone-button Name is the action verb: "Unmute mic" => muted, "Mute mic" => unmuted.
 fn map_mute(name: &str) -> Option<bool> {
-    if name.starts_with("Unmute") {
-        Some(true)
-    } else if name.starts_with("Mute") {
-        Some(false)
-    } else {
-        None
-    }
+    match_label(name, MUTE_LABELS)
 }
 
 /// video-button Name: "Turn camera off" => camera on, "Turn camera on" => off.
 fn map_camera(name: &str) -> Option<bool> {
-    let n = name.to_lowercase();
-    if n.contains("camera off") {
-        Some(true)
-    } else if n.contains("camera on") {
-        Some(false)
-    } else {
-        None
-    }
+    match_label(name, CAMERA_LABELS)
 }
 
 fn name_by_id(automation: &UIAutomation, parent: &UIElement, aid: &str) -> Option<String> {
@@ -395,6 +428,20 @@ mod tests {
         assert_eq!(map_mute("Unmute mic"), Some(true), "Unmute => muted");
         assert_eq!(map_mute("Mute mic"), Some(false), "Mute => unmuted");
         assert_eq!(map_mute("Microphone"), None);
+    }
+
+    #[test]
+    fn label_matching_is_case_insensitive_and_order_aware() {
+        // The seam matches case-insensitively, so a localised label in any casing still resolves.
+        assert_eq!(map_mute("UNMUTE MIC"), Some(true));
+        assert_eq!(map_mute("unmute mic"), Some(true));
+        // "unmute" contains "mute": the more specific needle must win, never collapse to unmuted.
+        assert_eq!(
+            map_mute("Unmute"),
+            Some(true),
+            "must not match the 'mute' needle first"
+        );
+        assert_eq!(map_camera("turn camera on"), Some(false));
     }
 
     #[test]
