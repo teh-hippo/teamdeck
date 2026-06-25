@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.4](https://github.com/teh-hippo/teamdeck/compare/v0.5.3...v0.5.4) (2026-06-25)
+
+
+### Bug Fixes
+
+* **helper:** respawn immediately when a command hits a broken helper stdin ([6928b27](https://github.com/teh-hippo/teamdeck/commit/6928b2782d9913ffac79baa4cbe82c6d6fbdda2d))
+
 ## [0.5.3](https://github.com/teh-hippo/teamdeck/compare/v0.5.2...v0.5.3) (2026-06-25)
 
 
