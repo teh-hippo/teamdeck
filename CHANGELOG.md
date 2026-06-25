@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.2](https://github.com/teh-hippo/teamdeck/compare/v0.5.1...v0.5.2) (2026-06-25)
+
+
+### Bug Fixes
+
+* **helper:** rely solely on the focus-free MSAA path, dropping the Invoke fallback ([a576175](https://github.com/teh-hippo/teamdeck/commit/a576175fecd0f8a364dcd969212118788233d500))
+
 ## [0.5.1](https://github.com/teh-hippo/teamdeck/compare/v0.5.0...v0.5.1) (2026-06-25)
 
 
