@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/teh-hippo/teamdeck/compare/v0.2.1...v0.3.0) (2026-06-25)
+
+
+### Features
+
+* **helper:** read camera state from the OS webcam signal ([7fa1fc2](https://github.com/teh-hippo/teamdeck/commit/7fa1fc2de18f42c0dba1e8429c39d2985c190dfe))
+* **plugin:** surface unrecognised control labels as a diagnostic ([67e2309](https://github.com/teh-hippo/teamdeck/commit/67e230962c3fdc26308994da212f07a0cd1e76a1))
+
 ## [0.2.1](https://github.com/teh-hippo/teamdeck/compare/v0.2.0...v0.2.1) (2026-06-23)
 
 
