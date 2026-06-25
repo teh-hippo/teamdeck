@@ -94,6 +94,23 @@ export class HelperClient {
 		}
 	}
 
+	/** Replaces a helper whose stdin broke (failed or unwritable write) before its 'close' landed,
+	 * when #proc is still set and recover() would no-op. Kills the dead child and respawns now; its
+	 * later 'close' is ignored by #spawn's `#proc !== proc` guard. Inert once stopped. */
+	#killAndRespawn(): void {
+		if (this.#stopped) {
+			return;
+		}
+		const dead = this.#proc;
+		this.#proc = undefined;
+		try {
+			dead?.kill();
+		} catch {
+			// ignore
+		}
+		this.#spawn();
+	}
+
 	toggleMute(): void {
 		this.#send("toggle-mute");
 	}
@@ -119,15 +136,16 @@ export class HelperClient {
 		const stdin = this.#proc?.stdin;
 		if (!stdin?.writable) {
 			this.#log.warn(`Teams helper not running; cannot send "${cmd}".`);
-			this.recover();
+			this.#killAndRespawn();
 			return;
 		}
 		try {
 			stdin.write(`${JSON.stringify(arg === undefined ? { cmd } : { cmd, arg })}\n`);
 		} catch (err) {
-			// The process can die between the writable check and the write (EPIPE); recover.
+			// The process can die between the writable check and the write (EPIPE): the pipe is gone
+			// but 'close' has not landed yet, so respawn now instead of dropping the press.
 			this.#log.warn(`Teams helper write failed for "${cmd}": ${String(err)}`);
-			this.recover();
+			this.#killAndRespawn();
 		}
 	}
 

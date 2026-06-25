@@ -214,3 +214,32 @@ test("restart backoff grows on a crash loop and resets after a healthy snapshot"
 	mock.timers.tick(1_000);
 	assert.equal(procs.length, 4, "backoff reset to 1s after a healthy snapshot");
 });
+
+test("a write EPIPE during the death race respawns immediately instead of deferring to the backoff", () => {
+	mock.timers.enable({ apis: ["setTimeout"] });
+	const { client, procs } = makeClient();
+	client.start();
+	// stdin broke but 'close' hasn't landed: #proc is still set and the next write throws EPIPE.
+	procs[0].stdin.failNext = true;
+	client.toggleMute();
+	assert.equal(procs.length, 2, "EPIPE on write must tear the dead child down and respawn now");
+	procs[0].emit("close", 1); // the replaced child's late close + any stale timer must not spawn a third.
+	mock.timers.tick(60_000);
+	assert.equal(procs.length, 2, "no double-spawn from the dead child's close or a stale timer");
+});
+
+test("an unwritable stdin during the death race respawns immediately", () => {
+	const { client, procs } = makeClient();
+	client.start();
+	procs[0].stdin.writable = false; // pipe gone; the process 'close' has not been processed yet.
+	client.toggleMute();
+	assert.equal(procs.length, 2, "an unwritable stdin must respawn immediately, not wait for the backoff");
+});
+
+test("after stop(), a stray command never respawns the helper", () => {
+	const { client, procs } = makeClient();
+	client.start();
+	client.stop();
+	client.toggleMute(); // stdin is gone, but the client is stopped: it must stay down.
+	assert.equal(procs.length, 1, "stop() must keep the helper down even if a command races in");
+});
