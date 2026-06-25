@@ -13,7 +13,9 @@ use uiautomation::types::{TreeScope, UIProperty};
 use uiautomation::variants::Variant;
 use uiautomation::{UIAutomation, UIElement};
 
-use windows::Win32::Foundation::HWND;
+use windows::core::w;
+use windows::Win32::Foundation::{ERROR_SUCCESS, HWND};
+use windows::Win32::System::Registry::{RegGetValueW, HKEY_CURRENT_USER, RRF_RT_REG_QWORD};
 use windows::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
 use windows::Win32::UI::WindowsAndMessaging::{
     GetForegroundWindow, GetWindowThreadProcessId, SetForegroundWindow,
@@ -136,6 +138,30 @@ fn map_camera(name: &str) -> Option<bool> {
     match_label(name, CAMERA_LABELS)
 }
 
+/// Camera-on state read from the OS, independent of Teams' display language: the per-app webcam
+/// privacy record. `LastUsedTimeStop == 0` means Microsoft Teams is currently capturing video
+/// (camera on); a non-zero FILETIME means capture stopped (camera off). Returns `None` when the
+/// record is missing or unreadable, so the caller falls back to the localised button label.
+/// `MSTeams_8wekyb3d8bbwe` is new Teams' fixed Microsoft Store identity.
+fn teams_webcam_in_use() -> Option<bool> {
+    let mut value: u64 = 0;
+    let mut size = std::mem::size_of::<u64>() as u32;
+    let status = unsafe {
+        RegGetValueW(
+            HKEY_CURRENT_USER,
+            w!(
+                r"SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\webcam\MSTeams_8wekyb3d8bbwe"
+            ),
+            w!("LastUsedTimeStop"),
+            RRF_RT_REG_QWORD,
+            None,
+            Some((&mut value as *mut u64).cast::<core::ffi::c_void>()),
+            Some(&mut size),
+        )
+    };
+    (status == ERROR_SUCCESS).then_some(value == 0)
+}
+
 fn name_by_id(automation: &UIAutomation, parent: &UIElement, aid: &str) -> Option<String> {
     find_first_id(automation, parent, aid)?.get_name().ok()
 }
@@ -222,7 +248,12 @@ fn build_snapshot(automation: &UIAutomation) -> Snapshot {
             name: m.get_name().unwrap_or_default(),
         });
         snap.signals.mute = read_signal(automation, &m, "microphone-button", map_mute);
-        snap.signals.camera = read_signal(automation, &m, "video-button", map_camera);
+        // Prefer the OS webcam privacy signal (language-independent); fall back to the localised
+        // video-button label only when the per-app record is unavailable.
+        snap.signals.camera = match teams_webcam_in_use() {
+            Some(on) => known(on, "os-webcam"),
+            None => read_signal(automation, &m, "video-button", map_camera),
+        };
         // hand: under the React flyout — not passively readable (left flyout-only/unknown).
         snap.signals.sharing = known(sharing, "uia-window");
     }
