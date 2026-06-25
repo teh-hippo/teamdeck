@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/teh-hippo/teamdeck/compare/v0.5.0...v0.5.1) (2026-06-25)
+
+
+### Performance Improvements
+
+* **helper:** cache meeting control elements for fast reads and toggles ([35675ba](https://github.com/teh-hippo/teamdeck/commit/35675ba2e2d83b308d33e95b28217f33595f6487))
+
 ## [0.5.0](https://github.com/teh-hippo/teamdeck/compare/v0.4.0...v0.5.0) (2026-06-25)
 
 
