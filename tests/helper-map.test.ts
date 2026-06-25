@@ -86,3 +86,18 @@ test("an available-but-null signal is unknown, never a fake off state", () => {
 	assert.equal(s.state.isMuted, undefined, "null value must not collapse to false");
 	assert.equal(s.availability?.isMuted, false, "available-but-null must render unknown, not off");
 });
+
+test("an unrecognised control label surfaces as a labelIssue diagnostic", () => {
+	const s = mapHelperSnapshot(
+		helperSnap({ signals: { ...helperSnap().signals, mute: sig(null, false, "uia-label?:Stumm") } }),
+	);
+	assert.equal(s.state.isMuted, undefined, "an unreadable label renders unknown, never a fake state");
+	assert.ok(
+		s.labelIssues?.some((i) => i.includes("mute") && i.includes("Stumm")),
+		"the offending control and its raw label are reported",
+	);
+});
+
+test("all-recognised labels produce no labelIssues", () => {
+	assert.equal(mapHelperSnapshot(helperSnap()).labelIssues, undefined);
+});

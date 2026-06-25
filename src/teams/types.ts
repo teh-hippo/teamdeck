@@ -33,4 +33,10 @@ export type TeamsSnapshot = {
 	 * the present field value is known.
 	 */
 	availability?: Partial<Record<keyof MeetingState, boolean>>;
+	/**
+	 * Controls whose UIA label the helper found but could not interpret (Teams reworded the control,
+	 * or the display language is unsupported), so their state renders unknown. Absent when every
+	 * present label was understood.
+	 */
+	labelIssues?: string[];
 };

@@ -32,6 +32,7 @@ export class HelperClient {
 	#snapshot: TeamsSnapshot = HELPER_DISCONNECTED;
 	#restartDelay = 1_000;
 	#restartTimer?: ReturnType<typeof setTimeout>;
+	#lastLabelIssues = "";
 	readonly #listeners = new Set<Listener>();
 
 	readonly #spawnFn: typeof nodeSpawn;
@@ -209,6 +210,21 @@ export class HelperClient {
 		// 'spawn' (which fires before the helper has proven it can stay up).
 		this.#restartDelay = 1_000;
 		this.#setSnapshot(snapshot);
+		this.#reportLabelIssues(snapshot.labelIssues);
+	}
+
+	/** Logs (throttled) when the helper reports a control whose UIA label it could not interpret, so
+	 * a Teams wording change or an unsupported display language is visible rather than a silently
+	 * greyed-out key. Re-logs only when the set of unrecognised labels changes. */
+	#reportLabelIssues(issues: string[] | undefined): void {
+		const key = (issues ?? []).join(" | ");
+		if (key === this.#lastLabelIssues) {
+			return;
+		}
+		this.#lastLabelIssues = key;
+		if (key.length > 0) {
+			this.#log.warn(`Teams control label not recognised (state shows unknown): ${key}`);
+		}
 	}
 
 	#setSnapshot(snapshot: TeamsSnapshot): void {

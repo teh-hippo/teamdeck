@@ -75,5 +75,21 @@ export function mapHelperSnapshot(h: HelperSnapshot): TeamsSnapshot {
 		isSharing: isKnown(s.sharing),
 	};
 
-	return { connected: h.teamsRunning, state, permissions, availability };
+	// The helper tags a control whose Name it could not interpret as `uia-label?:<name>`. Surface
+	// those so a Teams wording change or unsupported locale is diagnosable instead of silently
+	// greying the key out.
+	const labelIssues: string[] = [];
+	for (const [control, signal] of Object.entries(s)) {
+		if (signal.source.startsWith("uia-label?:")) {
+			labelIssues.push(`${control} ("${signal.source.slice("uia-label?:".length)}")`);
+		}
+	}
+
+	return {
+		connected: h.teamsRunning,
+		state,
+		permissions,
+		availability,
+		...(labelIssues.length > 0 ? { labelIssues } : {}),
+	};
 }

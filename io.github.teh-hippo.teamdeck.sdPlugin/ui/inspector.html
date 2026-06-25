@@ -58,6 +58,7 @@
 				else if (!p.teamsRunning) line = row("warn", "Teams not running");
 				else if (!p.inMeeting) line = row("warn", "Not in a meeting");
 				else line = row("ok", "In a meeting");
+				if (p.labelIssue) line += "<br>" + row("warn", "Unreadable control: " + p.labelIssue);
 				document.getElementById("status").innerHTML = line;
 			}
 		</script>

@@ -4,7 +4,12 @@ import { teams } from "./teams/client";
 import type { TeamsSnapshot } from "./teams/types";
 
 /** Diagnostic status payload sent to the property inspector. */
-type StatusPayload = { helperRunning: boolean; teamsRunning: boolean; inMeeting: boolean };
+type StatusPayload = {
+	helperRunning: boolean;
+	teamsRunning: boolean;
+	inMeeting: boolean;
+	labelIssue?: string;
+};
 
 /** Derives the diagnostic status payload from a snapshot and whether the helper is running. */
 export function statusPayload(snapshot: TeamsSnapshot, helperRunning: boolean): StatusPayload {
@@ -12,6 +17,7 @@ export function statusPayload(snapshot: TeamsSnapshot, helperRunning: boolean): 
 		helperRunning,
 		teamsRunning: snapshot.connected,
 		inMeeting: Boolean(snapshot.state.isInMeeting),
+		...(snapshot.labelIssues?.length ? { labelIssue: snapshot.labelIssues.join("; ") } : {}),
 	};
 }
 
