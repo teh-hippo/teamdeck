@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/teh-hippo/teamdeck/compare/v0.4.0...v0.5.0) (2026-06-25)
+
+
+### Features
+
+* **helper:** drive state reads and the reactions flyout from UIA events ([b1139a9](https://github.com/teh-hippo/teamdeck/commit/b1139a9cad41e42bc2590b6b9872aee3d9418822))
+
 ## [0.4.0](https://github.com/teh-hippo/teamdeck/compare/v0.3.0...v0.4.0) (2026-06-25)
 
 
