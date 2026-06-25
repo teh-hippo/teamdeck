@@ -6,12 +6,12 @@
 use serde::Serialize;
 use std::io::{BufRead, Write};
 use std::sync::mpsc;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use uiautomation::patterns::{
     UIExpandCollapsePattern, UIInvokePattern, UILegacyIAccessiblePattern,
 };
-use uiautomation::types::{TreeScope, UIProperty};
+use uiautomation::types::{Handle, TreeScope, UIProperty};
 use uiautomation::variants::Variant;
 use uiautomation::{UIAutomation, UIElement};
 
@@ -172,6 +172,19 @@ fn has_id(automation: &UIAutomation, parent: &UIElement, aid: &str) -> bool {
     find_first_id(automation, parent, aid).is_some()
 }
 
+/// Maps a control's (localised) UIA Name to a Signal: a recognised label gives a known value, an
+/// unrecognised one is tagged `uia-label?:<name>` so the plugin can surface it as a diagnostic.
+fn label_signal(name: &str, map: fn(&str) -> Option<bool>) -> Signal {
+    match map(name) {
+        Some(v) => known(v, "uia-label"),
+        None => Signal {
+            value: None,
+            available: false,
+            source: format!("uia-label?:{name}"),
+        },
+    }
+}
+
 /// Reads a labelled control's value from its UIA Name via a label->bool mapper, returning an
 /// "unknown" signal when the control is absent or its label is unrecognised.
 fn read_signal(
@@ -180,20 +193,24 @@ fn read_signal(
     aid: &str,
     map: fn(&str) -> Option<bool>,
 ) -> Signal {
-    let Some(n) = name_by_id(automation, meeting, aid) else {
-        return Signal::unknown();
-    };
-    match map(&n) {
-        Some(v) => known(v, "uia-label"),
-        None => Signal {
-            value: None,
-            available: false,
-            source: format!("uia-label?:{n}"),
-        },
+    match name_by_id(automation, meeting, aid) {
+        Some(n) => label_signal(&n, map),
+        None => Signal::unknown(),
     }
 }
 
-fn build_snapshot(automation: &UIAutomation) -> Snapshot {
+/// A cache request that fetches each element's ClassName and Name in the same cross-process call as
+/// the enumeration, so the per-window reads in the top-level walk are local (no UIA round-trip each).
+fn top_cache_request(
+    automation: &UIAutomation,
+) -> uiautomation::Result<uiautomation::core::UICacheRequest> {
+    let req = automation.create_cache_request()?;
+    req.add_property(UIProperty::ClassName)?;
+    req.add_property(UIProperty::Name)?;
+    Ok(req)
+}
+
+fn build_snapshot(automation: &UIAutomation, cache: &mut Option<isize>) -> Snapshot {
     let mut snap = Snapshot {
         schema: 1,
         ts: now_ms(),
@@ -212,55 +229,93 @@ fn build_snapshot(automation: &UIAutomation) -> Snapshot {
         },
     };
 
-    let root = match automation.get_root_element() {
-        Ok(r) => r,
-        Err(_) => return snap,
-    };
-    let true_cond = match automation.create_true_condition() {
-        Ok(c) => c,
-        Err(_) => return snap,
-    };
-    let top = match root.find_all(TreeScope::Children, &true_cond) {
-        Ok(t) => t,
-        Err(_) => return snap,
-    };
-
-    let mut meeting: Option<UIElement> = None;
+    // Top-level pass for Teams-running (any TeamsWebView) and screen-sharing (a sibling "Sharing
+    // control bar" window). Both need this enumeration, so a cache request fetches ClassName + Name
+    // in one round-trip and the reads below are local. On a warm cache `locate_meeting` reuses the
+    // cached HWND and skips re-finding; only a cold tick pays a second top-level walk (inside
+    // `find_meeting_window`), which is rare (startup / post-invalidation).
     let mut sharing = false;
-    for w in &top {
-        if w.get_classname().unwrap_or_default() == "TeamsWebView" {
-            snap.teams_running = true;
-            if meeting.is_none() && is_meeting_window(automation, w) {
-                meeting = Some(w.clone());
+    if let (Ok(root), Ok(true_cond), Ok(req)) = (
+        automation.get_root_element(),
+        automation.create_true_condition(),
+        top_cache_request(automation),
+    ) {
+        if let Ok(top) = root.find_all_build_cache(TreeScope::Children, &true_cond, &req) {
+            for w in &top {
+                if w.get_cached_classname().unwrap_or_default() == "TeamsWebView" {
+                    snap.teams_running = true;
+                }
+                if w.get_cached_name()
+                    .unwrap_or_default()
+                    .starts_with("Sharing control bar")
+                {
+                    sharing = true;
+                }
             }
-        }
-        if w.get_name()
-            .unwrap_or_default()
-            .starts_with("Sharing control bar")
-        {
-            sharing = true;
         }
     }
 
-    if let Some(m) = meeting {
-        // Selection required microphone-button AND hangup-button, so this is an active meeting.
-        snap.in_meeting = true;
-        snap.window = Some(WindowInfo {
-            pid: m.get_process_id().unwrap_or(0),
-            name: m.get_name().unwrap_or_default(),
-        });
-        snap.signals.mute = read_signal(automation, &m, "microphone-button", map_mute);
-        // Prefer the OS webcam privacy signal (language-independent); fall back to the localised
-        // video-button label only when the per-app record is unavailable.
-        snap.signals.camera = match teams_webcam_in_use() {
-            Some(on) => known(on, "os-webcam"),
-            None => read_signal(automation, &m, "video-button", map_camera),
-        };
-        // hand: under the React flyout — not passively readable (left flyout-only/unknown).
-        snap.signals.sharing = known(sharing, "uia-window");
+    if let Some(m) = locate_meeting(automation, cache) {
+        // Liveness is confirmed by the mic read itself -- a live meeting always exposes
+        // microphone-button -- so there is no separate validation probe. If the cached window no
+        // longer has it (meeting ended / window reused), drop the cache and report not-in-meeting.
+        match name_by_id(automation, &m, "microphone-button") {
+            Some(mic) => {
+                // A live meeting always exposes microphone-button; on the warm path this mic read
+                // is the only liveness gate (vs the cold path's strict mic+hangup match) -- a small,
+                // intentional relaxation for speed. Being in a meeting implies Teams is running, so
+                // assert that invariant here regardless of whether the top-level walk above
+                // succeeded (it can transiently fail while the cached HWND still resolves).
+                snap.in_meeting = true;
+                snap.teams_running = true;
+                snap.window = Some(WindowInfo {
+                    pid: m.get_process_id().unwrap_or(0),
+                    name: m.get_name().unwrap_or_default(),
+                });
+                snap.signals.mute = label_signal(&mic, map_mute);
+                // Prefer the OS webcam privacy signal (language-independent); fall back to the
+                // localised video-button label only when the per-app record is unavailable.
+                snap.signals.camera = match teams_webcam_in_use() {
+                    Some(on) => known(on, "os-webcam"),
+                    None => read_signal(automation, &m, "video-button", map_camera),
+                };
+                // hand: under the React flyout -- not passively readable (left flyout-only/unknown).
+                snap.signals.sharing = known(sharing, "uia-window");
+            }
+            None => *cache = None,
+        }
     }
 
     snap
+}
+
+/// Resolves the active meeting window, preferring the cached HWND (one `ElementFromHandle` plus a
+/// cheap classname check, ~sub-ms vs the full enumeration) and otherwise re-finding it from scratch
+/// (the strict microphone+hangup match). Callers confirm it is still a live meeting via their own
+/// control reads (the snapshot's mic read, a command's button lookup), so no separate probe is run
+/// here. Updates `cache`, clearing it when the cached window is gone or no longer a TeamsWebView.
+///
+/// The cache is only ever seeded by `find_meeting_window`, so it can bind to the wrong window only if
+/// the OS recycles the meeting's HWND onto another *live* TeamsWebView meeting -- which needs HWND
+/// reuse plus concurrent meetings, out of scope under the single-meeting assumption. The common
+/// recycle (onto the main Teams window, which has no microphone-button) self-heals: the caller's mic
+/// read fails and clears the cache.
+fn locate_meeting(automation: &UIAutomation, cache: &mut Option<isize>) -> Option<UIElement> {
+    if let Some(h) = *cache {
+        if let Ok(el) = automation.element_from_handle(Handle::from(h)) {
+            if el
+                .get_classname()
+                .map(|c| c == "TeamsWebView")
+                .unwrap_or(false)
+            {
+                return Some(el);
+            }
+        }
+        *cache = None;
+    }
+    let m = find_meeting_window(automation)?;
+    *cache = m.get_native_window_handle().ok().map(|h| h.into());
+    Some(m)
 }
 
 /// Whether a top-level window is an active Teams meeting: a TeamsWebView that contains both the
@@ -328,7 +383,7 @@ fn invoke_in_flyout(automation: &UIAutomation, meeting: &UIElement, aid: &str) -
     // The flyout DOM builds lazily; poll for the item (up to ~750ms) instead of a fixed sleep.
     let mut ok = false;
     for _ in 0..15 {
-        std::thread::sleep(std::time::Duration::from_millis(50));
+        std::thread::sleep(Duration::from_millis(50));
         if let Some(el) = find_first_id(automation, meeting, aid) {
             ok = invoke_element(&el);
             break;
@@ -416,10 +471,22 @@ fn dispatch(
     }
 }
 
-/// Executes a control verb against the active meeting window. Returns false when there is no meeting
-/// or the target control is absent, else the control's actuation result.
-fn do_command(automation: &UIAutomation, verb: &str, arg: Option<&str>) -> bool {
-    match find_meeting_window(automation) {
+/// Executes a control verb against the cached meeting window. If the target control is missing --
+/// the cached window was rebuilt (rejoin) or the meeting ended -- it clears the cache, re-finds the
+/// meeting once, and retries, so a key press is never silently dropped on a stale cache.
+fn do_command(
+    automation: &UIAutomation,
+    cache: &mut Option<isize>,
+    verb: &str,
+    arg: Option<&str>,
+) -> bool {
+    if let Some(m) = locate_meeting(automation, cache) {
+        if let Some(ok) = dispatch(automation, &m, verb, arg) {
+            return ok;
+        }
+    }
+    *cache = None;
+    match locate_meeting(automation, cache) {
         Some(m) => dispatch(automation, &m, verb, arg).unwrap_or(false),
         None => false,
     }
@@ -453,40 +520,54 @@ fn serve(automation: &UIAutomation) {
         }
         // EOF on stdin (parent exited): dropping `tx` disconnects the channel checked below.
     });
+    // HWND of the active meeting window, cached across ticks and commands so the hot path skips the
+    // ~170-300ms top-level enumeration + per-candidate descendant probes (see `locate_meeting`).
+    let mut cache: Option<isize> = None;
     loop {
-        // Drain pending commands; exit if the parent has closed stdin.
-        loop {
-            match rx.try_recv() {
-                Ok(line) => {
-                    let line = line.trim();
-                    if line.is_empty() {
-                        continue;
-                    }
-                    if let Ok(cmd) = serde_json::from_str::<serde_json::Value>(line) {
-                        let verb = cmd.get("cmd").and_then(|v| v.as_str()).unwrap_or("");
-                        let arg = cmd.get("arg").and_then(|v| v.as_str());
-                        let ok = do_command(automation, verb, arg);
-                        if !emit_line(
-                            &serde_json::json!({ "type": "result", "cmd": verb, "arg": arg, "ok": ok })
-                                .to_string(),
-                        ) {
-                            return;
-                        }
-                    }
-                }
-                Err(mpsc::TryRecvError::Empty) => break,
-                Err(mpsc::TryRecvError::Disconnected) => return, // parent closed stdin
-            }
-        }
-        let snap = build_snapshot(automation);
+        // Emit a snapshot: this is both the idle tick and the immediate post-command refresh (the
+        // loop returns straight here after handling commands, so new state shows without waiting).
+        let snap = build_snapshot(automation, &mut cache);
         if let Ok(mut v) = serde_json::to_value(&snap) {
             v["type"] = serde_json::json!("snapshot");
             if !emit_line(&v.to_string()) {
                 return; // stdout pipe broken: the parent is gone.
             }
         }
-        std::thread::sleep(std::time::Duration::from_millis(300));
+        // Wait up to 300ms for a command. Unlike a fixed sleep, a command wakes the loop at once;
+        // a burst is then drained and run before the next snapshot, coalescing it to one emission.
+        match rx.recv_timeout(Duration::from_millis(300)) {
+            Ok(first) => {
+                if !handle_command(automation, &mut cache, &first) {
+                    return;
+                }
+                while let Ok(next) = rx.try_recv() {
+                    if !handle_command(automation, &mut cache, &next) {
+                        return;
+                    }
+                }
+            }
+            Err(mpsc::RecvTimeoutError::Timeout) => {} // idle: loop re-snapshots
+            Err(mpsc::RecvTimeoutError::Disconnected) => return, // parent closed stdin
+        }
     }
+}
+
+/// Parses and runs one command line, emitting its `{"type":"result",...}`. Returns false only when
+/// the stdout pipe breaks (the parent is gone), so the caller exits.
+fn handle_command(automation: &UIAutomation, cache: &mut Option<isize>, line: &str) -> bool {
+    let line = line.trim();
+    if line.is_empty() {
+        return true;
+    }
+    let Ok(cmd) = serde_json::from_str::<serde_json::Value>(line) else {
+        return true;
+    };
+    let verb = cmd.get("cmd").and_then(|v| v.as_str()).unwrap_or("");
+    let arg = cmd.get("arg").and_then(|v| v.as_str());
+    let ok = do_command(automation, cache, verb, arg);
+    emit_line(
+        &serde_json::json!({ "type": "result", "cmd": verb, "arg": arg, "ok": ok }).to_string(),
+    )
 }
 
 fn main() {
@@ -506,7 +587,7 @@ fn main() {
     }
 
     // Read mode (used by the CI and release smoke tests): emit one snapshot and exit.
-    let snap = build_snapshot(&automation);
+    let snap = build_snapshot(&automation, &mut None);
     println!("{}", serde_json::to_string(&snap).unwrap());
 }
 
