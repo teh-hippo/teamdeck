@@ -524,10 +524,14 @@ fn register_window_handlers(
     let closed: UIEventHandler = (Box::new({
         let tx = tx.clone();
         move |e: &UIElement, _ev| {
-            // A closing window's cached classname can be empty, so ping then too; else only tracked windows.
+            // Ping only when a tracked window closes. Transient WebView2 child windows close with an
+            // empty ClassName (verified), so empty is ignored -- treating it as relevant pinged on
+            // every tooltip/popup close. A meeting/Teams or sharing window that still carries its
+            // ClassName/Name is caught here; a leave that arrives empty is reconciled by the
+            // in-meeting backstop tick.
             let cls = e.get_cached_classname().unwrap_or_default();
             let name = e.get_cached_name().unwrap_or_default();
-            if cls.is_empty() || cls == "TeamsWebView" || name.starts_with("Sharing control bar") {
+            if cls == "TeamsWebView" || name.starts_with("Sharing control bar") {
                 let _ = tx.send(Msg::Ping);
             }
             Ok(())
@@ -630,22 +634,25 @@ fn result_line(verb: &str, arg: Option<&str>, ok: bool) -> String {
     serde_json::json!({ "type": "result", "cmd": verb, "arg": arg, "ok": ok }).to_string()
 }
 
-/// Emits one snapshot line and reconciles the Name handler. False only when the stdout pipe is broken.
+/// Emits one snapshot line and reconciles the Name handler. Returns `Some(in_meeting)` on success;
+/// `None` only when the stdout pipe is broken (parent gone).
 fn emit_snapshot(
     automation: &UIAutomation,
     cache: &mut MeetingCache,
     name_reg: &mut Option<NameReg>,
     tx: &Sender<Msg>,
-) -> bool {
+) -> Option<bool> {
     let snap = build_snapshot(automation, cache);
-    reconcile_name_handler(automation, name_reg, cache.hwnd, snap.in_meeting, tx);
-    match serde_json::to_value(&snap) {
+    let in_meeting = snap.in_meeting;
+    reconcile_name_handler(automation, name_reg, cache.hwnd, in_meeting, tx);
+    let ok = match serde_json::to_value(&snap) {
         Ok(mut v) => {
             v["type"] = serde_json::json!("snapshot");
             emit_line(&v.to_string())
         }
         Err(_) => true,
-    }
+    };
+    ok.then_some(in_meeting)
 }
 
 /// Whether the loop should emit now: a snapshot is pending (`dirty`) and the debounce has elapsed.
@@ -662,7 +669,22 @@ fn loop_wait(dirty: bool, since_emit: Duration, debounce: Duration, tick: Durati
     }
 }
 
-/// Persistent service: streams snapshot + result JSON on stdout, reads command JSON on stdin. Event-driven (Name + window handlers, ~70-100ms) over a 1s safety tick, snapshots debounced to ~150ms. Exits when stdin or stdout closes.
+/// The backstop interval between forced resnapshots, chosen by meeting state. The event handlers
+/// (window open/close, mic/camera Name changes) drive real state changes, so this only reconciles a
+/// *missed* event: short in a meeting (bounds a missed mute/leave) and long otherwise, where a
+/// window-open event catches a meeting starting and nothing else needs polling.
+fn effective_tick(in_meeting: bool, meeting_tick: Duration, idle_tick: Duration) -> Duration {
+    if in_meeting {
+        meeting_tick
+    } else {
+        idle_tick
+    }
+}
+
+/// Persistent service: streams snapshot + result JSON on stdout, reads command JSON on stdin.
+/// Event-driven (Name + window handlers, ~70-100ms) over an adaptive backstop tick (short in a
+/// meeting, long otherwise; see `effective_tick`), snapshots debounced to ~150ms. Exits when stdin
+/// or stdout closes.
 fn serve(automation: &UIAutomation) {
     let (tx, rx) = mpsc::channel::<Msg>();
     {
@@ -697,21 +719,30 @@ fn serve(automation: &UIAutomation) {
     }
 
     let debounce = Duration::from_millis(150);
-    let tick = Duration::from_secs(1);
+    // Backstop ticks (see `effective_tick`): the event handlers do the real work, so these only
+    // reconcile a missed event. Short in a meeting bounds a missed mute/leave; long otherwise keeps
+    // the helper near-idle while window-open events catch a meeting starting.
+    let meeting_tick = Duration::from_secs(5);
+    let idle_tick = Duration::from_secs(15);
     // Start "dirty" with a back-dated last-emit so the first snapshot fires immediately.
     let mut dirty = true;
+    let mut in_meeting = false;
     let mut last_emit = Instant::now()
         .checked_sub(debounce)
         .unwrap_or_else(Instant::now);
 
     loop {
         if should_emit(dirty, last_emit.elapsed(), debounce) {
-            if !emit_snapshot(automation, &mut cache, &mut name_reg, &tx) {
-                break; // stdout pipe broken: parent gone.
+            match emit_snapshot(automation, &mut cache, &mut name_reg, &tx) {
+                None => break, // stdout pipe broken: parent gone.
+                Some(im) => {
+                    in_meeting = im;
+                    last_emit = Instant::now();
+                    dirty = false;
+                }
             }
-            last_emit = Instant::now();
-            dirty = false;
         }
+        let tick = effective_tick(in_meeting, meeting_tick, idle_tick);
         let wait = loop_wait(dirty, last_emit.elapsed(), debounce, tick);
         match rx.recv_timeout(wait) {
             Ok(Msg::Cmd(line)) => match handle_command(automation, &mut cache, &line, &tx) {
@@ -731,7 +762,7 @@ fn serve(automation: &UIAutomation) {
                 dirty = true;
             }
             Ok(Msg::Eof) => break, // stdin closed: parent gone.
-            // Timeout = the 1s safety tick, or the debounce window elapsing: resnapshot either way.
+            // Timeout = the adaptive backstop tick, or the debounce window elapsing: resnapshot either way.
             Err(mpsc::RecvTimeoutError::Timeout) => dirty = true,
             Err(mpsc::RecvTimeoutError::Disconnected) => break,
         }
@@ -1001,6 +1032,22 @@ mod tests {
             loop_wait(true, Duration::from_millis(200), d, t),
             Duration::ZERO,
             "dirty and overdue: emit on the next loop without sleeping"
+        );
+    }
+
+    #[test]
+    fn effective_tick_is_short_in_meeting_and_long_otherwise() {
+        let meeting = Duration::from_secs(5);
+        let idle = Duration::from_secs(15);
+        assert_eq!(
+            effective_tick(true, meeting, idle),
+            meeting,
+            "in a meeting: short backstop bounds a missed mute/leave"
+        );
+        assert_eq!(
+            effective_tick(false, meeting, idle),
+            idle,
+            "out of a meeting: long backstop, events catch a meeting starting"
         );
     }
 }
