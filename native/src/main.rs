@@ -250,8 +250,10 @@ fn build_snapshot(automation: &UIAutomation, cache: &mut MeetingCache) -> Snapsh
         },
     };
 
-    // Top-level pass for Teams-running (any TeamsWebView) and screen-sharing (the sibling "Sharing control bar" window), cached in one round-trip.
+    // Top-level pass: collect Teams-running (any TeamsWebView), screen-sharing (the sibling "Sharing
+    // control bar" window) and the TeamsWebView meeting candidates, all from one cached round-trip.
     let mut sharing = false;
+    let mut candidates: Vec<UIElement> = Vec::new();
     if let (Ok(root), Ok(true_cond), Ok(req)) = (
         automation.get_root_element(),
         automation.create_true_condition(),
@@ -261,6 +263,7 @@ fn build_snapshot(automation: &UIAutomation, cache: &mut MeetingCache) -> Snapsh
             for w in &top {
                 if w.get_cached_classname().unwrap_or_default() == "TeamsWebView" {
                     snap.teams_running = true;
+                    candidates.push(w.clone());
                 }
                 if w.get_cached_name()
                     .unwrap_or_default()
@@ -272,7 +275,7 @@ fn build_snapshot(automation: &UIAutomation, cache: &mut MeetingCache) -> Snapsh
         }
     }
 
-    if let Some(m) = locate_meeting(automation, cache) {
+    if let Some(m) = locate_meeting(automation, cache, &candidates) {
         // The mic read is the liveness gate: present => in a meeting (else drop the cache and bail).
         match cached_name(automation, cache, &m, "microphone-button") {
             Some(mic) => {
@@ -302,8 +305,15 @@ fn build_snapshot(automation: &UIAutomation, cache: &mut MeetingCache) -> Snapsh
     snap
 }
 
-/// Resolves the meeting window, preferring the cached HWND over a full re-find (`find_meeting_window`, the cache's only seed). Clears the cache when the window is gone or not a TeamsWebView; a wrong-window bind self-heals via the caller's mic read.
-fn locate_meeting(automation: &UIAutomation, cache: &mut MeetingCache) -> Option<UIElement> {
+/// Resolves the meeting window, preferring the cached HWND over a scan of the top-level `TeamsWebView`
+/// candidates already enumerated by `build_snapshot` (so no second top-level enumeration). Clears the
+/// cache when the window is gone or not a TeamsWebView; a wrong-window bind self-heals via the
+/// caller's mic read.
+fn locate_meeting(
+    automation: &UIAutomation,
+    cache: &mut MeetingCache,
+    candidates: &[UIElement],
+) -> Option<UIElement> {
     if let Some(h) = cache.hwnd {
         if let Ok(el) = automation.element_from_handle(Handle::from(h)) {
             if el
@@ -316,7 +326,10 @@ fn locate_meeting(automation: &UIAutomation, cache: &mut MeetingCache) -> Option
         }
         cache.rebind(None);
     }
-    let m = find_meeting_window(automation)?;
+    let m = candidates
+        .iter()
+        .find(|w| is_meeting_window(automation, w))?
+        .clone();
     cache.rebind(m.get_native_window_handle().ok().map(|h| h.into()));
     Some(m)
 }
@@ -334,6 +347,23 @@ fn find_meeting_window(automation: &UIAutomation) -> Option<UIElement> {
     let true_cond = automation.create_true_condition().ok()?;
     let top = root.find_all(TreeScope::Children, &true_cond).ok()?;
     top.into_iter().find(|w| is_meeting_window(automation, w))
+}
+
+/// The top-level TeamsWebView windows (meeting-window candidates) for `locate_meeting`. The snapshot
+/// path collects these inline during its single top-level pass; the command path enumerates here.
+fn top_teamswebviews(automation: &UIAutomation) -> Vec<UIElement> {
+    let (Ok(root), Ok(true_cond)) = (
+        automation.get_root_element(),
+        automation.create_true_condition(),
+    ) else {
+        return Vec::new();
+    };
+    let Ok(top) = root.find_all(TreeScope::Children, &true_cond) else {
+        return Vec::new();
+    };
+    top.into_iter()
+        .filter(|w| w.get_classname().unwrap_or_default() == "TeamsWebView")
+        .collect()
 }
 
 fn find_first_id(automation: &UIAutomation, parent: &UIElement, aid: &str) -> Option<UIElement> {
@@ -450,7 +480,8 @@ fn route(verb: &str, arg: Option<&str>) -> Action {
 
 /// Actuates a toggle control (mute/camera/leave) on the cached window, re-finding once if it's absent so a press is never silently dropped. Runs inline (DoDefaultAction is fast).
 fn act_toggle(automation: &UIAutomation, cache: &mut MeetingCache, aid: &'static str) -> bool {
-    if let Some(m) = locate_meeting(automation, cache) {
+    // Fast path: a valid cached window actuates with no top-level enumeration (the common in-call case).
+    if let Some(m) = locate_meeting(automation, cache, &[]) {
         if let Some(el) = cached_elem(automation, cache, &m, aid) {
             let ok = actuate(&el);
             // Validated element that still didn't actuate (transient rebuild): drop it so the next press/tick re-finds; no in-call retry.
@@ -460,9 +491,10 @@ fn act_toggle(automation: &UIAutomation, cache: &mut MeetingCache, aid: &'static
             return ok;
         }
     }
-    // Control absent from the cached window: drop the cache and retry once against a fresh meeting.
+    // Cache empty/stale or control absent: enumerate once and retry against a fresh meeting.
     cache.rebind(None);
-    match locate_meeting(automation, cache) {
+    let candidates = top_teamswebviews(automation);
+    match locate_meeting(automation, cache, &candidates) {
         Some(m) => cached_elem(automation, cache, &m, aid)
             .map(|el| actuate(&el))
             .unwrap_or(false),
