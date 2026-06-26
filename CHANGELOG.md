@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.5](https://github.com/teh-hippo/teamdeck/compare/v0.5.4...v0.5.5) (2026-06-26)
+
+
+### Performance Improvements
+
+* **helper:** make the serve-loop backstop tick adaptive and stop snapshotting on transient window closes ([eb75682](https://github.com/teh-hippo/teamdeck/commit/eb75682a522833d1f453b633670038fb5bc65d59))
+
 ## [0.5.4](https://github.com/teh-hippo/teamdeck/compare/v0.5.3...v0.5.4) (2026-06-25)
 
 
