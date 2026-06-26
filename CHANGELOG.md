@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.6](https://github.com/teh-hippo/teamdeck/compare/v0.5.5...v0.5.6) (2026-06-26)
+
+
+### Performance Improvements
+
+* **helper:** drop the snapshot's redundant second top-level window walk ([fc17def](https://github.com/teh-hippo/teamdeck/commit/fc17def726882e48f52b7b17e3a8f536d0a84cfe))
+
 ## [0.5.5](https://github.com/teh-hippo/teamdeck/compare/v0.5.4...v0.5.5) (2026-06-26)
 
 
