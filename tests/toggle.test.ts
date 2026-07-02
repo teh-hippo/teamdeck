@@ -49,7 +49,9 @@ test("isActionable gates on connected, in a meeting, and the permission", () => 
 });
 
 test("selectImage renders disabled when the field is unavailable (never fakes unknown state)", () => {
-	// Hand via the UIA helper: actionable (canToggleHand true) but state unknown (availability false).
+	// Unit guard for selectImage: permission true + availability false. mapHelperSnapshot no longer
+	// produces this pair for hand (an unreadable hand now also disables the permission), but
+	// selectImage must still render disabled on unknown state regardless of the permission.
 	const handUnknown: TeamsSnapshot = {
 		connected: true,
 		state: { isInMeeting: true, isHandRaised: undefined },

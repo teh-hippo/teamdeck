@@ -15,7 +15,7 @@ function helperSnap(overrides: Partial<HelperSnapshot> = {}): HelperSnapshot {
 		signals: {
 			mute: sig(false),
 			camera: sig(true),
-			hand: sig(null, false, "flyout-only"),
+			hand: sig(false),
 			sharing: sig(false, true, "uia-window"),
 		},
 		...overrides,
@@ -29,6 +29,8 @@ test("maps mute/camera/sharing values and in-meeting", () => {
 	assert.equal(s.state.isMuted, false, "value false => unmuted");
 	assert.equal(s.state.isVideoOn, true);
 	assert.equal(s.state.isSharing, false);
+	assert.equal(s.state.isHandRaised, false, "hand now readable from the toolbar button");
+	assert.equal(s.availability?.isHandRaised, true);
 });
 
 test("muted maps to isMuted true; sharing maps to isSharing", () => {
@@ -43,15 +45,22 @@ test("synthesizes permissions from availability and meeting (B1)", () => {
 	const s = mapHelperSnapshot(helperSnap());
 	assert.equal(s.permissions.canToggleMute, true);
 	assert.equal(s.permissions.canToggleVideo, true);
-	assert.equal(s.permissions.canToggleHand, true, "hand is control-only but actionable in a meeting");
+	assert.equal(s.permissions.canToggleHand, true, "hand actionable when its state label is readable, like mute/camera");
 	assert.equal(s.permissions.canLeave, true);
 	assert.equal(s.permissions.canReact, true);
 });
 
 test("unknown signals are undefined and marked unavailable (B2 - never fake state)", () => {
-	const s = mapHelperSnapshot(helperSnap());
-	assert.equal(s.state.isHandRaised, undefined, "hand state is behind the flyout, not readable");
+	const s = mapHelperSnapshot(
+		helperSnap({ signals: { ...helperSnap().signals, hand: sig(null, false, "uia-label?:Handzeichen") } }),
+	);
+	assert.equal(s.state.isHandRaised, undefined, "an unreadable hand label renders unknown");
 	assert.equal(s.availability?.isHandRaised, false);
+	assert.equal(s.permissions.canToggleHand, false, "an unreadable hand greys and disables the key");
+	assert.ok(
+		s.labelIssues?.some((i) => i.includes("hand") && i.includes("Handzeichen")),
+		"an unrecognised hand label surfaces as a labelIssue",
+	);
 	assert.equal(s.availability?.isMuted, true, "mute is readable");
 	assert.equal(s.availability?.isInMeeting, true);
 });
@@ -63,7 +72,7 @@ test("out of meeting: no command permissions, mute/camera unavailable", () => {
 			signals: {
 				mute: sig(null, false, "none"),
 				camera: sig(null, false, "none"),
-				hand: sig(null, false, "flyout-only"),
+				hand: sig(null, false, "none"),
 				sharing: sig(null, false, "none"),
 			},
 		}),
@@ -71,6 +80,7 @@ test("out of meeting: no command permissions, mute/camera unavailable", () => {
 	assert.equal(s.state.isInMeeting, false);
 	assert.equal(s.permissions.canToggleMute, false);
 	assert.equal(s.permissions.canToggleVideo, false);
+	assert.equal(s.permissions.canToggleHand, false);
 	assert.equal(s.permissions.canLeave, false);
 	assert.equal(s.state.isMuted, undefined);
 });

@@ -57,12 +57,13 @@ export function mapHelperSnapshot(h: HelperSnapshot): TeamsSnapshot {
 		isSharing: known(s.sharing),
 	};
 
-	// A key is actionable only in a meeting; mute/camera also require that the helper can read the
-	// control. Hand/leave/react are control-only (state may be unknown) but available in a meeting.
+	// A key is actionable only in a meeting; mute/camera/hand also require that the helper can read
+	// the control's state label, so an unreadable label greys and disables the key. Leave/react are
+	// control-only (no readable state) but available in a meeting.
 	const permissions: Partial<MeetingPermissions> = {
 		canToggleMute: inMeeting && s.mute.available,
 		canToggleVideo: inMeeting && s.camera.available,
-		canToggleHand: inMeeting,
+		canToggleHand: inMeeting && s.hand.available,
 		canLeave: inMeeting,
 		canReact: inMeeting,
 	};
