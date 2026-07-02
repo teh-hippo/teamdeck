@@ -61,17 +61,6 @@ const ICONS = [
 	["imgs/actions/leave/icon", 20, 40, "leave", "call_end_24_filled.svg"],
 	["imgs/actions/leave/enabled", 72, 144, "leave", "call_end_24_filled.svg"],
 	["imgs/actions/leave/disabled", 72, 144, "disabled", "call_end_24_regular.svg"],
-	["imgs/actions/react/like-icon", 20, 40, "like", "thumb_like_24_filled.svg"],
-	["imgs/actions/react/like", 72, 144, "like", "thumb_like_24_filled.svg"],
-	["imgs/actions/react/love-icon", 20, 40, "love", "heart_24_filled.svg"],
-	["imgs/actions/react/love", 72, 144, "love", "heart_24_filled.svg"],
-	["imgs/actions/react/applause-icon", 20, 40, "applause", "hand_multiple_24_filled.svg"],
-	["imgs/actions/react/applause", 72, 144, "applause", "hand_multiple_24_filled.svg"],
-	["imgs/actions/react/laugh-icon", 20, 40, "laugh", "emoji_laugh_24_filled.svg"],
-	["imgs/actions/react/laugh", 72, 144, "laugh", "emoji_laugh_24_filled.svg"],
-	["imgs/actions/react/wow-icon", 20, 40, "wow", "emoji_surprise_24_filled.svg"],
-	["imgs/actions/react/wow", 72, 144, "wow", "emoji_surprise_24_filled.svg"],
-	["imgs/actions/react/disabled", 72, 144, "disabled", "thumb_like_24_filled.svg"],
 ];
 
 // Read-only status tiles share one regular shape: a neutral action-list glyph plus on/off/
@@ -86,6 +75,24 @@ for (const [tile, glyph] of STATUS_TILES) {
 		[`imgs/actions/${tile}/on`, 72, 144, tile, glyph],
 		[`imgs/actions/${tile}/off`, 72, 144, "statusOff", glyph],
 		[`imgs/actions/${tile}/unavailable`, 72, 144, "unavailable", glyph],
+	);
+}
+
+// Each reaction shares one shape: a coloured action-list glyph, a coloured key image, and a greyed
+// disabled key image that reuses the same glyph. The disabled tile is per-reaction (not one shared
+// icon) so every reaction stays visually distinct on the device even when it is not actionable.
+const REACTION_TILES = [
+	["like", "thumb_like_24_filled.svg"],
+	["love", "heart_24_filled.svg"],
+	["applause", "hand_multiple_24_filled.svg"],
+	["laugh", "emoji_laugh_24_filled.svg"],
+	["wow", "emoji_surprise_24_filled.svg"],
+];
+for (const [name, glyph] of REACTION_TILES) {
+	ICONS.push(
+		[`imgs/actions/react/${name}-icon`, 20, 40, name, glyph],
+		[`imgs/actions/react/${name}`, 72, 144, name, glyph],
+		[`imgs/actions/react/${name}-disabled`, 72, 144, "disabled", glyph],
 	);
 }
 

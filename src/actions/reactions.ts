@@ -2,15 +2,15 @@ import { action } from "@elgato/streamdeck";
 
 import { teams } from "../teams/client";
 import { type KeyConfig, MeetingKeyAction } from "./key-action";
-import { isActionable, REACTIONS } from "./toggle";
+import { REACTIONS, selectReactionImage } from "./toggle";
 
-/** Builds a reaction's KeyConfig: gated on canReact, showing its icon when actionable. */
+/** Builds a reaction's KeyConfig: gated on canReact, showing its own icon (colour when actionable,
+ * greyed otherwise). */
 function reaction(spec: (typeof REACTIONS)[keyof typeof REACTIONS]): KeyConfig {
-	const enabled = `imgs/actions/react/${spec.image}`;
 	return {
 		permission: "canReact",
 		command: () => teams.react(spec.type),
-		imageFor: (s) => (isActionable(s, "canReact") ? enabled : "imgs/actions/react/disabled"),
+		imageFor: (s) => selectReactionImage(spec, s),
 	};
 }
 

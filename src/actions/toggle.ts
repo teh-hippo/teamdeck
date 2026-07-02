@@ -64,11 +64,25 @@ export const HAND: ToggleSpec = {
 	},
 };
 
-/** The five Teams reactions: action key → wire type (verified live) and icon name. */
+/**
+ * The five Teams reactions: action key → wire type (verified live), the icon-name of the colour key
+ * image, and its greyed disabled variant. The disabled path is a plain string literal (not built with
+ * `${...}`) so `tools/check-icons.mjs` verifies it: disabled tiles are only ever set at runtime via
+ * setImage and never appear in the manifest, unlike the colour images, which the manifest covers.
+ */
 export const REACTIONS = {
-	applause: { type: "applause", image: "applause" },
-	laugh: { type: "laugh", image: "laugh" },
-	like: { type: "like", image: "like" },
-	love: { type: "love", image: "love" },
-	surprised: { type: "wow", image: "wow" },
-} as const satisfies Record<string, { type: ReactionType; image: string }>;
+	applause: { type: "applause", image: "applause", disabled: "imgs/actions/react/applause-disabled" },
+	laugh: { type: "laugh", image: "laugh", disabled: "imgs/actions/react/laugh-disabled" },
+	like: { type: "like", image: "like", disabled: "imgs/actions/react/like-disabled" },
+	love: { type: "love", image: "love", disabled: "imgs/actions/react/love-disabled" },
+	surprised: { type: "wow", image: "wow", disabled: "imgs/actions/react/wow-disabled" },
+} as const satisfies Record<string, { type: ReactionType; image: string; disabled: string }>;
+
+/**
+ * Selects a reaction's key image: its colour icon when actionable, otherwise its own greyed icon.
+ * Kept here (dependency-free) beside selectImage as the single source of truth, so it is
+ * node-testable and every reaction stays distinct rather than collapsing to one shared disabled tile.
+ */
+export function selectReactionImage(spec: { image: string; disabled: string }, snapshot: TeamsSnapshot): string {
+	return isActionable(snapshot, "canReact") ? `imgs/actions/react/${spec.image}` : spec.disabled;
+}
