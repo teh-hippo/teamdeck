@@ -84,7 +84,7 @@ function validSnapshot() {
 		signals: {
 			mute: { value: false, available: true, source: "uia-label" },
 			camera: { value: true, available: true, source: "uia-label" },
-			hand: { value: null, available: false, source: "flyout-only" },
+			hand: { value: false, available: true, source: "uia-label" },
 			sharing: { value: false, available: true, source: "uia-window" },
 		},
 	};

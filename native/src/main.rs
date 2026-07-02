@@ -110,6 +110,20 @@ const CAMERA_LABELS: &[StateLabel] = &[
     },
 ];
 
+/// Raise-hand button Name is the action verb: a "lower" verb means the hand is raised, a "raise"
+/// verb means it is lowered. Order matters: "raised" contains "raise", so the "lower" needle must be
+/// tested first, or a label mentioning "raised" could be misread as lowered.
+const HAND_LABELS: &[StateLabel] = &[
+    StateLabel {
+        needle: "lower",
+        value: true,
+    },
+    StateLabel {
+        needle: "raise",
+        value: false,
+    },
+];
+
 /// First label whose needle is in `name` (case-insensitive); None if none match.
 fn match_label(name: &str, labels: &[StateLabel]) -> Option<bool> {
     let n = name.to_lowercase();
@@ -241,11 +255,7 @@ fn build_snapshot(automation: &UIAutomation, cache: &mut MeetingCache) -> Snapsh
         signals: Signals {
             mute: Signal::unknown(),
             camera: Signal::unknown(),
-            hand: Signal {
-                value: None,
-                available: false,
-                source: "flyout-only".into(),
-            },
+            hand: Signal::unknown(),
             sharing: Signal::unknown(),
         },
     };
@@ -295,7 +305,13 @@ fn build_snapshot(automation: &UIAutomation, cache: &mut MeetingCache) -> Snapsh
                         None => Signal::unknown(),
                     },
                 };
-                // hand state lives under the React flyout: not passively readable.
+                // Hand state is read from the toolbar raise-hand button's localised Name (the action
+                // verb), like mute/camera. May be absent in channel-meeting / live-event / 1:1
+                // variants, in which case it renders unknown.
+                snap.signals.hand = match cached_name(automation, cache, &m, "raisehands-button") {
+                    Some(n) => label_signal(&n, HAND_LABELS),
+                    None => Signal::unknown(),
+                };
                 snap.signals.sharing = known(sharing, "uia-window");
             }
             None => cache.rebind(None),
@@ -455,9 +471,9 @@ fn react_id(kind: &str) -> Option<&'static str> {
 /// What a command verb maps to, decided without touching UIA (unit-testable). `Noop` never actuates.
 #[derive(Debug, PartialEq, Eq)]
 enum Action {
-    /// Actuate a single control by AutomationId (mute / camera / leave).
+    /// Actuate a single control by AutomationId (mute / camera / leave / raise-hand).
     Toggle(&'static str),
-    /// Open the React flyout and actuate an item by AutomationId (raise-hand / reactions).
+    /// Open the React flyout and actuate an item by AutomationId (reactions).
     Flyout(&'static str),
     /// Unknown verb or unrecognised reaction: do nothing, report ok:false, no retry.
     Noop,
@@ -469,7 +485,11 @@ fn route(verb: &str, arg: Option<&str>) -> Action {
         "toggle-mute" => Action::Toggle("microphone-button"),
         "toggle-camera" => Action::Toggle("video-button"),
         "leave" => Action::Toggle("hangup-button"),
-        "raise-hand" => Action::Flyout("raisehands-button"),
+        // Raise-hand is a main-toolbar button again (a peer of mic/camera), so actuate it directly
+        // via the focus-free MSAA path (do_default_action), like mute. If Teams moves it back under
+        // the React flyout the button goes absent and act_toggle surfaces ok:false; note a
+        // reworked-but-present control could no-op silently, as do_default_action reports success.
+        "raise-hand" => Action::Toggle("raisehands-button"),
         "react" => match arg.and_then(react_id) {
             Some(id) => Action::Flyout(id),
             None => Action::Noop,
@@ -591,7 +611,7 @@ fn register_window_handlers(
     Some((opened, closed, root))
 }
 
-/// Subtree PropertyChanged(Name) handler on the meeting window; prefetches AutomationId so it filters to mic/video with no per-event UIA read. Only pings.
+/// Subtree PropertyChanged(Name) handler on the meeting window; prefetches AutomationId so it filters to mic/video/raise-hand with no per-event UIA read. Only pings.
 fn register_name_handler(
     automation: &UIAutomation,
     hwnd: isize,
@@ -603,7 +623,7 @@ fn register_name_handler(
     req.add_property(UIProperty::AutomationId).ok()?;
     let handler: UIPropertyChangedEventHandler = (Box::new(move |e: &UIElement, _p, _v| {
         if let Ok(aid) = e.get_cached_automation_id() {
-            if aid == "microphone-button" || aid == "video-button" {
+            if aid == "microphone-button" || aid == "video-button" || aid == "raisehands-button" {
                 let _ = tx.send(Msg::Ping);
             }
         }
@@ -928,6 +948,22 @@ mod tests {
     }
 
     #[test]
+    fn hand_label_reads_the_action_verb() {
+        // The Name is the action verb: "Lower your hand" => raised, "Raise your hand" => lowered.
+        assert_eq!(match_label("Lower your hand", HAND_LABELS), Some(true));
+        assert_eq!(match_label("Raise your hand", HAND_LABELS), Some(false));
+        // Case-insensitive, so a localised label in any casing still resolves.
+        assert_eq!(match_label("LOWER YOUR HAND", HAND_LABELS), Some(true));
+        // Order is load-bearing: "raised" contains "raise", so a label mentioning "raised" must not
+        // collapse to lowered; the "lower" needle is tested first.
+        assert_eq!(
+            match_label("Hand raised, lower your hand", HAND_LABELS),
+            Some(true)
+        );
+        assert_eq!(match_label("Microphone", HAND_LABELS), None);
+    }
+
+    #[test]
     fn react_id_maps_every_reaction() {
         assert_eq!(react_id("like"), Some("like-button"));
         assert_eq!(react_id("love"), Some("heart-button"));
@@ -947,7 +983,7 @@ mod tests {
         assert_eq!(route("leave", None), Action::Toggle("hangup-button"));
         assert_eq!(
             route("raise-hand", None),
-            Action::Flyout("raisehands-button")
+            Action::Toggle("raisehands-button")
         );
         assert_eq!(route("react", Some("like")), Action::Flyout("like-button"));
         assert_eq!(
