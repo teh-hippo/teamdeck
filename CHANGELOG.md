@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.7](https://github.com/teh-hippo/teamdeck/compare/v0.5.6...v0.5.7) (2026-07-02)
+
+
+### Bug Fixes
+
+* actuate and detect raise-hand on the meeting toolbar ([12a2bc0](https://github.com/teh-hippo/teamdeck/commit/12a2bc093fd4453579430fe694db88e6aba58dea))
+
 ## [0.5.6](https://github.com/teh-hippo/teamdeck/compare/v0.5.5...v0.5.6) (2026-06-26)
 
 
