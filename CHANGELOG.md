@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/teh-hippo/teamdeck/compare/v0.6.0...v0.6.1) (2026-07-03)
+
+
+### Bug Fixes
+
+* isolate the availability opt-in and drop the shared status readout ([dcae3c0](https://github.com/teh-hippo/teamdeck/commit/dcae3c05c742cf972630c3a6d932ae17f05daec1))
+
 ## [0.6.0](https://github.com/teh-hippo/teamdeck/compare/v0.5.8...v0.6.0) (2026-07-03)
 
 
