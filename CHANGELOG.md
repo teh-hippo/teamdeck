@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/teh-hippo/teamdeck/compare/v0.5.8...v0.6.0) (2026-07-03)
+
+
+### Features
+
+* add opt-in Teams availability status tile ([8b4efb7](https://github.com/teh-hippo/teamdeck/commit/8b4efb7ee2cfc87b5abf16649267dfea6a637d70))
+
 ## [0.5.8](https://github.com/teh-hippo/teamdeck/compare/v0.5.7...v0.5.8) (2026-07-03)
 
 
