@@ -6,7 +6,6 @@ import { Applause, Laugh, Like, Love, Surprised } from "./actions/reactions";
 import { InMeeting, Sharing } from "./actions/status-tiles";
 import { Camera, Hand, Mute } from "./actions/toggles";
 import { teams } from "./teams/client";
-import { registerPropertyInspector } from "./ui";
 
 // Keep the log level off "trace": it records every message between Stream Deck and the plugin and
 // is far noisier than normal operation needs.
@@ -34,7 +33,6 @@ type GlobalSettings = { allowLogReading?: boolean };
 streamDeck
 	.connect()
 	.then(async () => {
-		registerPropertyInspector();
 		streamDeck.settings.onDidReceiveGlobalSettings<GlobalSettings>((ev) =>
 			teams.setLogReadingEnabled(ev.settings.allowLogReading === true),
 		);

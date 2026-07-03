@@ -12,44 +12,27 @@
 				margin: 0;
 				padding: 14px;
 			}
-			.status {
-				line-height: 1.9;
-				margin-bottom: 12px;
-			}
-			.dot {
-				display: inline-block;
-				width: 8px;
-				height: 8px;
-				border-radius: 50%;
-				margin-right: 7px;
-				vertical-align: middle;
-			}
-			.ok { background: #2ea043; }
-			.bad { background: #d13438; }
-			.warn { background: #e3a008; }
 			.hint { color: #9a9a9a; margin-top: 12px; line-height: 1.5; }
 			.opt { margin-top: 14px; padding-top: 12px; border-top: 1px solid #444; }
 			.opt label { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; }
 			.opt input { margin-top: 2px; }
-			.opt .desc { color: #9a9a9a; line-height: 1.5; }
+			.opt .desc { color: #9a9a9a; line-height: 1.5; margin-top: 4px; }
+			.opt .desc a { color: #4aa3ff; }
 		</style>
 	</head>
 	<body>
-		<div class="status" id="status">Connecting&hellip;</div>
 		<div class="hint">
 			Status tiles mirror your meeting without disturbing the active window. Pressing a control
 			key briefly brings Teams forward, then returns focus to where you were.
 		</div>
-		<div class="opt">
+		<div class="opt" id="optIn" style="display: none">
 			<label>
 				<input type="checkbox" id="allowLogReading" onchange="onToggleLogReading(this.checked)" />
 				<span>
 					Allow reading status via Teams logs
 					<div class="desc">
-						When enabled, TeamDeck reads only the current availability word (Available, Busy,
-						Away, Do Not Disturb, Be Right Back, Offline) from your local New Teams log. No
-						messages, contacts, meeting titles, or names are read, and nothing leaves this
-						machine.
+						Your status is read from the local Teams log file.
+						<a href="#" onclick="openProof(event)">No other data is read.</a>
 					</div>
 				</span>
 			</label>
@@ -58,9 +41,15 @@
 			let ws;
 			let piUuid;
 			let globalSettings = {};
+			const AVAILABILITY = "io.github.teh-hippo.teamdeck.availability";
+			const SOURCE_URL =
+				"https://github.com/teh-hippo/teamdeck/blob/main/native/src/main.rs#L407-L425";
 
 			function connectElgatoStreamDeckSocket(port, uuid, registerEvent, info, actionInfo) {
 				piUuid = uuid;
+				let action;
+				try { action = JSON.parse(actionInfo).action; } catch { action = undefined; }
+				if (action === AVAILABILITY) document.getElementById("optIn").style.display = "block";
 				ws = new WebSocket("ws://127.0.0.1:" + port);
 				ws.onopen = () => {
 					ws.send(JSON.stringify({ event: registerEvent, uuid }));
@@ -68,9 +57,7 @@
 				};
 				ws.onmessage = (e) => {
 					const msg = JSON.parse(e.data);
-					if (msg.event === "sendToPropertyInspector") {
-						render(msg.payload);
-					} else if (msg.event === "didReceiveGlobalSettings") {
+					if (msg.event === "didReceiveGlobalSettings") {
 						applyGlobalSettings(msg.payload && msg.payload.settings);
 					}
 				};
@@ -87,24 +74,9 @@
 				ws.send(JSON.stringify({ event: "setGlobalSettings", context: piUuid, payload: globalSettings }));
 			}
 
-			function render(p) {
-				if (!p) return;
-				const esc = (s) =>
-					String(s).replace(
-						/[&<>"']/g,
-						(c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
-					);
-				const row = (cls, label) => '<span class="dot ' + cls + '"></span>' + esc(label);
-				let line;
-				if (!p.helperRunning) line = row("bad", "Helper not running");
-				else if (!p.teamsRunning) line = row("warn", "Teams not running");
-				else if (!p.inMeeting) line = row("warn", "Not in a meeting");
-				else line = row("ok", "In a meeting");
-				if (p.logReadingAllowed && p.presence && p.presence !== "unknown") {
-					line += "<br>" + row("ok", "Status: " + p.presence);
-				}
-				if (p.labelIssue) line += "<br>" + row("warn", "Unreadable control: " + p.labelIssue);
-				document.getElementById("status").innerHTML = line;
+			function openProof(e) {
+				e.preventDefault();
+				ws.send(JSON.stringify({ event: "openUrl", payload: { url: SOURCE_URL } }));
 			}
 		</script>
 	</body>
