@@ -33,6 +33,9 @@ export class HelperClient {
 	#restartDelay = 1_000;
 	#restartTimer?: ReturnType<typeof setTimeout>;
 	#lastLabelIssues = "";
+	// Whether the user has opted in to reading presence from the Teams log. Off by default; re-sent
+	// to the helper on every (re)spawn so a restarted helper re-learns it.
+	#logReadingEnabled = false;
 	readonly #listeners = new Set<Listener>();
 
 	readonly #spawnFn: typeof nodeSpawn;
@@ -67,7 +70,9 @@ export class HelperClient {
 		}
 		this.#stopped = false;
 		// Clear any snapshot from a previous run so a restart never shows a dead helper's stale state.
-		this.#snapshot = HELPER_DISCONNECTED;
+		// Stamp the current opt-in (set moments earlier by setLogReadingEnabled) so the pre-first-snapshot
+		// window reflects it rather than dropping to undefined.
+		this.#snapshot = { ...HELPER_DISCONNECTED, logReadingAllowed: this.#logReadingEnabled };
 		this.#spawn();
 	}
 
@@ -132,6 +137,36 @@ export class HelperClient {
 		this.#send("react", type === "wow" ? "surprised" : type);
 	}
 
+	/**
+	 * Enables or disables reading presence from the Teams log (the "Allow reading status via Teams
+	 * logs" opt-in). Stores the desired state, tells the live helper, and re-broadcasts so the
+	 * Availability tile reflects the change immediately. The value is re-asserted on every helper
+	 * (re)spawn (see `#spawn`).
+	 */
+	setLogReadingEnabled(on: boolean): void {
+		this.#logReadingEnabled = on;
+		this.#sendControl("set-log-reading", on ? "on" : "off");
+		// Re-stamp the current snapshot with the new opt-in so the tile repaints now.
+		this.#setSnapshot(this.#snapshot);
+	}
+
+	/**
+	 * Writes a control command directly to the live helper's stdin. Unlike `#send`, it never
+	 * respawns on an unwritable pipe — the `#spawn` re-send covers a dead/replacing helper, so this
+	 * cannot recurse into a respawn loop.
+	 */
+	#sendControl(cmd: string, arg: string): void {
+		const stdin = this.#proc?.stdin;
+		if (!stdin?.writable) {
+			return;
+		}
+		try {
+			stdin.write(`${JSON.stringify({ cmd, arg })}\n`);
+		} catch (err) {
+			this.#log.warn(`Teams helper control "${cmd}" failed: ${String(err)}`);
+		}
+	}
+
 	#send(cmd: string, arg?: string): void {
 		const stdin = this.#proc?.stdin;
 		if (!stdin?.writable) {
@@ -169,7 +204,12 @@ export class HelperClient {
 		}
 		proc.stderr?.on("data", (chunk) => this.#log.warn(`Teams helper: ${String(chunk).trim()}`));
 		proc.stdin?.on("error", (err) => this.#log.warn(`Teams helper stdin error: ${err.message}`));
-		proc.on("spawn", () => this.#log.info("Teams UIA helper started."));
+		proc.on("spawn", () => {
+			this.#log.info("Teams UIA helper started.");
+			// Re-assert the presence opt-in so a freshly (re)spawned helper — which defaults to OFF —
+			// re-learns it. Done here (after spawn, stdin writable) via the non-respawning #sendControl.
+			this.#sendControl("set-log-reading", this.#logReadingEnabled ? "on" : "off");
+		});
 		const handleGone = (reason: string): void => {
 			if (this.#proc !== proc) {
 				return; // a newer process already replaced this one; ignore.
@@ -246,9 +286,11 @@ export class HelperClient {
 	}
 
 	#setSnapshot(snapshot: TeamsSnapshot): void {
-		this.#snapshot = snapshot;
+		// Stamp the client-owned opt-in onto every broadcast so the Availability tile paints from the
+		// persisted setting rather than the helper's lagging `source`, and updates the moment it toggles.
+		this.#snapshot = { ...snapshot, logReadingAllowed: this.#logReadingEnabled };
 		for (const listener of this.#listeners) {
-			this.#notify(listener, snapshot);
+			this.#notify(listener, this.#snapshot);
 		}
 	}
 

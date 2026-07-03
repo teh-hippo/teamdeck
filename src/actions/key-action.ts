@@ -99,3 +99,18 @@ export abstract class StatusAction extends RenderingKeyAction {
 		teams.recover();
 	}
 }
+
+/**
+ * Read-only tile rendering a multi-state selector (e.g. presence), where the boolean
+ * on/off/unavailable `StatusSpec` does not fit. Like `StatusAction`, a press only nudges the helper
+ * to recover.
+ */
+export abstract class PresenceKeyAction extends RenderingKeyAction {
+	constructor(imageFor: ImageFor) {
+		super(imageFor);
+	}
+
+	override onKeyDown(): void {
+		teams.recover();
+	}
+}

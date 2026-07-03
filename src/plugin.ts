@@ -1,5 +1,6 @@
 import streamDeck from "@elgato/streamdeck";
 
+import { Availability } from "./actions/availability";
 import { Leave } from "./actions/leave";
 import { Applause, Laugh, Like, Love, Surprised } from "./actions/reactions";
 import { InMeeting, Sharing } from "./actions/status-tiles";
@@ -22,13 +23,30 @@ streamDeck.actions.registerAction(new Love());
 streamDeck.actions.registerAction(new Surprised());
 streamDeck.actions.registerAction(new Sharing());
 streamDeck.actions.registerAction(new InMeeting());
+streamDeck.actions.registerAction(new Availability());
 
-// Register with Stream Deck first, then start the Teams helper so plugin registration is never
-// blocked by spawning the helper child process.
+/** The plugin's global settings; only the presence opt-in so far. */
+type GlobalSettings = { allowLogReading?: boolean };
+
+// Register with Stream Deck first, then load the presence opt-in and start the Teams helper. The
+// opt-in is loaded (and applied to the client) BEFORE the helper starts, so the very first helper
+// spawn is told the correct state and the Availability tile never flickers "opt-in required".
 streamDeck
 	.connect()
-	.then(() => {
+	.then(async () => {
 		registerPropertyInspector();
+		streamDeck.settings.onDidReceiveGlobalSettings<GlobalSettings>((ev) =>
+			teams.setLogReadingEnabled(ev.settings.allowLogReading === true),
+		);
+		// Load the opt-in before starting the helper so its first spawn is told the correct state and
+		// the tile never flashes "opt-in required". A settings failure must NOT prevent the helper
+		// starting — that would silently break mute/camera/hand/leave/reactions.
+		try {
+			const settings = await streamDeck.settings.getGlobalSettings<GlobalSettings>();
+			teams.setLogReadingEnabled(settings.allowLogReading === true);
+		} catch (error) {
+			streamDeck.logger.warn(`Reading global settings failed; log reading stays off: ${error}`);
+		}
 		return teams.start();
 	})
 	.catch((error) => streamDeck.logger.error(`Startup failed: ${error}`));

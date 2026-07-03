@@ -1,7 +1,10 @@
-import type { MeetingPermissions, MeetingState, TeamsSnapshot } from "./types";
+import type { MeetingPermissions, MeetingState, Presence, PresenceInfo, TeamsSnapshot } from "./types";
 
 /** One signal as reported by the UIA helper (`value` is `null` when unknown). */
 export type HelperSignal = { value: boolean | null; available: boolean; source: string };
+
+/** The presence field as emitted by the helper (absent from an older helper binary). */
+export type HelperPresence = { value: string; known: boolean; source: string };
 
 /** A snapshot line emitted by the helper's `serve` mode (see `native/`). */
 export type HelperSnapshot = {
@@ -14,7 +17,19 @@ export type HelperSnapshot = {
 		hand: HelperSignal;
 		sharing: HelperSignal;
 	};
+	presence?: HelperPresence;
 };
+
+/** The presence values the plugin understands; any other token renders "unknown". */
+const KNOWN_PRESENCES = new Set<Presence>([
+	"available",
+	"busy",
+	"doNotDisturb",
+	"beRightBack",
+	"away",
+	"offline",
+	"unknown",
+]);
 
 /** The snapshot used when the helper is not running. */
 export const HELPER_DISCONNECTED: TeamsSnapshot = {
@@ -22,6 +37,7 @@ export const HELPER_DISCONNECTED: TeamsSnapshot = {
 	state: {},
 	permissions: {},
 	availability: {},
+	presence: { value: "unknown", known: false, source: "none" },
 };
 
 /** Whether a signal carries a value the UI can trust: the helper marked it available and it is not
@@ -34,6 +50,21 @@ function isKnown(sig: HelperSignal): boolean {
 /** A signal's value, or `undefined` when the helper cannot read it (so it renders "unknown"). */
 function known(sig: HelperSignal): boolean | undefined {
 	return isKnown(sig) ? (sig.value ?? undefined) : undefined;
+}
+
+/** Maps the helper's presence field defensively: an absent field (older helper) or an unrecognised
+ * token becomes "unknown" rather than throwing — a throw here would discard the whole snapshot and
+ * drop mute/camera too. */
+function mapPresence(p: HelperPresence | undefined): PresenceInfo {
+	if (!p || typeof p.value !== "string") {
+		return { value: "unknown", known: false, source: "none" };
+	}
+	const value = KNOWN_PRESENCES.has(p.value as Presence) ? (p.value as Presence) : "unknown";
+	return {
+		value,
+		known: p.known === true && value !== "unknown",
+		source: typeof p.source === "string" ? p.source : "none",
+	};
 }
 
 /**
@@ -91,6 +122,7 @@ export function mapHelperSnapshot(h: HelperSnapshot): TeamsSnapshot {
 		state,
 		permissions,
 		availability,
+		presence: mapPresence(h.presence),
 		...(labelIssues.length > 0 ? { labelIssues } : {}),
 	};
 }

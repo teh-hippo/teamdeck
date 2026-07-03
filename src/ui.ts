@@ -8,6 +8,9 @@ type StatusPayload = {
 	helperRunning: boolean;
 	teamsRunning: boolean;
 	inMeeting: boolean;
+	/** The presence enum only (e.g. "busy") — never any other log text. */
+	presence: string;
+	logReadingAllowed: boolean;
 	labelIssue?: string;
 };
 
@@ -17,6 +20,8 @@ export function statusPayload(snapshot: TeamsSnapshot, helperRunning: boolean): 
 		helperRunning,
 		teamsRunning: snapshot.connected,
 		inMeeting: Boolean(snapshot.state.isInMeeting),
+		presence: snapshot.presence?.value ?? "unknown",
+		logReadingAllowed: snapshot.logReadingAllowed === true,
 		...(snapshot.labelIssues?.length ? { labelIssue: snapshot.labelIssues.join("; ") } : {}),
 	};
 }

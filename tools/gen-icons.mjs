@@ -138,6 +138,13 @@ async function writeIcon(rel, size, isGlyph, color, glyph, suffix) {
 	await writeFile(`${out}${suffix}.png`, await renderPng(svg, size));
 }
 
+/** Writes a pre-built SVG string (for the presence tiles, whose shapes are drawn, not glyph-sourced). */
+async function writeRawSvg(rel, size, svg, suffix) {
+	const out = join(sdPlugin, rel);
+	await mkdir(dirname(out), { recursive: true });
+	await writeFile(`${out}${suffix}.png`, await renderPng(svg, size));
+}
+
 for (const [rel, base, retina, colorKey, glyph] of ICONS) {
 	const isGlyph = !(base === 72 && retina === 144);
 	const color = isGlyph ? glyphColor(colorKey) : (COLORS[colorKey] ?? COLORS.disabled);
@@ -145,4 +152,64 @@ for (const [rel, base, retina, colorKey, glyph] of ICONS) {
 	await writeIcon(rel, retina, isGlyph, color, glyph, "@2x");
 	console.log(`wrote ${rel}.png (${base}) and @2x (${retina})`);
 }
+
+// Presence (Availability) tiles: a solid coloured status disc + a white inner mark, mirroring the
+// Teams presence taxonomy but using the TeamDeck palette for coherence. Shapes are drawn here (not
+// sourced from a Fluent glyph) except "in a meeting", which reuses the people glyph.
+const WHITE = "#F7FAFC";
+const PRESENCE_DISC = {
+	available: COLORS.on,
+	busy: COLORS.off,
+	dnd: COLORS.off,
+	brb: COLORS.raised,
+	away: COLORS.raised,
+	offline: "#8A94A6",
+	inmeeting: COLORS.off,
+	unknown: "#6B7280",
+	optin: "#5A6B7B",
+};
+
+function presenceKey(inner, size, color, hollow = false) {
+	const disc = hollow
+		? `<circle cx="36" cy="36" r="18.5" fill="none" stroke="${color}" stroke-width="3.5"/>`
+		: `<circle cx="36" cy="36" r="19" fill="${color}"/>`;
+	return `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="${size}" height="${size}" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+  <rect x="5" y="5" width="62" height="62" rx="16" fill="${COLORS.tile}"/>
+  <rect x="5.75" y="5.75" width="60.5" height="60.5" rx="15.25" fill="none" stroke="${COLORS.tileStroke}" stroke-width="1.5"/>
+  ${disc}
+  ${inner}
+</svg>`;
+}
+
+function presenceListIcon(size) {
+	return `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="${size}" height="${size}" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="12" cy="12" r="7" fill="${COLORS.listGlyph}"/>
+</svg>`;
+}
+
+const peopleInner = await readGlyph("people_24_filled.svg");
+const PRESENCE_INNER = {
+	available: `<path d="M28 36.5 l5.5 5.5 L45 30" fill="none" stroke="${WHITE}" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>`,
+	busy: "",
+	dnd: `<rect x="26.5" y="33.5" width="19" height="5" rx="2.5" fill="${WHITE}"/>`,
+	brb: `<circle cx="36" cy="36" r="9" fill="none" stroke="${WHITE}" stroke-width="2.6"/><path d="M36 30.5 V36 l3.6 3.2" fill="none" stroke="${WHITE}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>`,
+	away: `<circle cx="36" cy="36" r="9" fill="none" stroke="${WHITE}" stroke-width="2.6"/><path d="M36 30.5 V36 l3.6 3.2" fill="none" stroke="${WHITE}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>`,
+	offline: `<path d="M30 30 l12 12 M42 30 l-12 12" stroke="${WHITE}" stroke-width="4" stroke-linecap="round"/>`,
+	inmeeting: `<g transform="translate(20 20) scale(1.33)" fill="${WHITE}">${peopleInner}</g>`,
+	unknown: `<path d="M31.5 33 a4.6 4.6 0 1 1 6.2 4.3 c-1.7 1 -1.7 2 -1.7 3.2" fill="none" stroke="${WHITE}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="35.9" cy="44.2" r="1.9" fill="${WHITE}"/>`,
+	optin: `<rect x="30" y="35.5" width="12" height="9" rx="1.6" fill="${WHITE}"/><path d="M32.4 35.5 v-2.4 a3.6 3.6 0 0 1 7.2 0 v2.4" fill="none" stroke="${WHITE}" stroke-width="2.3"/>`,
+};
+
+await writeRawSvg("imgs/actions/availability/icon", 20, presenceListIcon(20), "");
+await writeRawSvg("imgs/actions/availability/icon", 40, presenceListIcon(40), "@2x");
+for (const name of Object.keys(PRESENCE_INNER)) {
+	const rel = `imgs/actions/availability/${name}`;
+	const hollow = name === "unknown";
+	await writeRawSvg(rel, 72, presenceKey(PRESENCE_INNER[name], 72, PRESENCE_DISC[name], hollow), "");
+	await writeRawSvg(rel, 144, presenceKey(PRESENCE_INNER[name], 144, PRESENCE_DISC[name], hollow), "@2x");
+	console.log(`wrote ${rel}.png (72) and @2x (144)`);
+}
+
 console.log("done");

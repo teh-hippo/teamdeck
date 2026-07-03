@@ -28,6 +28,10 @@
 			.bad { background: #d13438; }
 			.warn { background: #e3a008; }
 			.hint { color: #9a9a9a; margin-top: 12px; line-height: 1.5; }
+			.opt { margin-top: 14px; padding-top: 12px; border-top: 1px solid #444; }
+			.opt label { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; }
+			.opt input { margin-top: 2px; }
+			.opt .desc { color: #9a9a9a; line-height: 1.5; }
 		</style>
 	</head>
 	<body>
@@ -36,18 +40,51 @@
 			Status tiles mirror your meeting without disturbing the active window. Pressing a control
 			key briefly brings Teams forward, then returns focus to where you were.
 		</div>
+		<div class="opt">
+			<label>
+				<input type="checkbox" id="allowLogReading" onchange="onToggleLogReading(this.checked)" />
+				<span>
+					Allow reading status via Teams logs
+					<div class="desc">
+						When enabled, TeamDeck reads only the current availability word (Available, Busy,
+						Away, Do Not Disturb, Be Right Back, Offline) from your local New Teams log. No
+						messages, contacts, meeting titles, or names are read, and nothing leaves this
+						machine.
+					</div>
+				</span>
+			</label>
+		</div>
 		<script>
 			let ws;
+			let piUuid;
+			let globalSettings = {};
 
 			function connectElgatoStreamDeckSocket(port, uuid, registerEvent, info, actionInfo) {
+				piUuid = uuid;
 				ws = new WebSocket("ws://127.0.0.1:" + port);
-				ws.onopen = () => ws.send(JSON.stringify({ event: registerEvent, uuid }));
+				ws.onopen = () => {
+					ws.send(JSON.stringify({ event: registerEvent, uuid }));
+					ws.send(JSON.stringify({ event: "getGlobalSettings", context: uuid }));
+				};
 				ws.onmessage = (e) => {
 					const msg = JSON.parse(e.data);
 					if (msg.event === "sendToPropertyInspector") {
 						render(msg.payload);
+					} else if (msg.event === "didReceiveGlobalSettings") {
+						applyGlobalSettings(msg.payload && msg.payload.settings);
 					}
 				};
+			}
+
+			function applyGlobalSettings(settings) {
+				globalSettings = settings || {};
+				const cb = document.getElementById("allowLogReading");
+				if (cb) cb.checked = globalSettings.allowLogReading === true;
+			}
+
+			function onToggleLogReading(checked) {
+				globalSettings = Object.assign({}, globalSettings, { allowLogReading: checked });
+				ws.send(JSON.stringify({ event: "setGlobalSettings", context: piUuid, payload: globalSettings }));
 			}
 
 			function render(p) {
@@ -63,6 +100,9 @@
 				else if (!p.teamsRunning) line = row("warn", "Teams not running");
 				else if (!p.inMeeting) line = row("warn", "Not in a meeting");
 				else line = row("ok", "In a meeting");
+				if (p.logReadingAllowed && p.presence && p.presence !== "unknown") {
+					line += "<br>" + row("ok", "Status: " + p.presence);
+				}
 				if (p.labelIssue) line += "<br>" + row("warn", "Unreadable control: " + p.labelIssue);
 				document.getElementById("status").innerHTML = line;
 			}

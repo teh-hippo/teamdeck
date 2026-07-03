@@ -19,6 +19,14 @@ export type MeetingPermissions = {
 /** Reaction types accepted by the `send-reaction` command. */
 export type ReactionType = "like" | "love" | "applause" | "laugh" | "wow";
 
+/** Coarse Teams availability, read from the New Teams log. Mirrors the helper's `Presence` enum.
+ * `unknown` covers "not read yet", "opt-in off" and "Teams not running". */
+export type Presence = "available" | "busy" | "doNotDisturb" | "beRightBack" | "away" | "offline" | "unknown";
+
+/** The presence field of a snapshot. `known` is false when the value must render "unavailable".
+ * `source` is one of the helper's fixed tokens (`teams-log`/`disabled`/`none`) — never raw log text. */
+export type PresenceInfo = { value: Presence; known: boolean; source: string };
+
 /** A subscriber to snapshot updates. */
 export type Listener = (snapshot: TeamsSnapshot) => void;
 
@@ -39,4 +47,12 @@ export type TeamsSnapshot = {
 	 * present label was understood.
 	 */
 	labelIssues?: string[];
+	/** Coarse Teams availability, from the opt-in Teams-log reader. Absent from an older helper. */
+	presence?: PresenceInfo;
+	/**
+	 * Whether the user has opted in to reading presence from the Teams log. Injected by the client
+	 * from the persisted global setting (not the helper), so the tile paints from the setting rather
+	 * than the helper's lagging `source` and never flickers "opt-in required" at startup.
+	 */
+	logReadingAllowed?: boolean;
 };

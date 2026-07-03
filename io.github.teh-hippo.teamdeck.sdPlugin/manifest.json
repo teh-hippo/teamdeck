@@ -186,6 +186,21 @@
 					"TitleAlignment": "middle"
 				}
 			]
+		},
+		{
+			"Name": "Availability",
+			"UUID": "io.github.teh-hippo.teamdeck.availability",
+			"Icon": "imgs/actions/availability/icon",
+			"Tooltip": "Show your Microsoft Teams availability. Opt in via the property inspector; reads your local Teams log.",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/availability/optin",
+					"TitleAlignment": "middle"
+				}
+			]
 		}
 	],
 	"Category": "TeamDeck",

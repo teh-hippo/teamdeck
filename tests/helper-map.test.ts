@@ -111,3 +111,32 @@ test("an unrecognised control label surfaces as a labelIssue diagnostic", () => 
 test("all-recognised labels produce no labelIssues", () => {
 	assert.equal(mapHelperSnapshot(helperSnap()).labelIssues, undefined);
 });
+
+test("maps presence from the helper field", () => {
+	const s = mapHelperSnapshot(helperSnap({ presence: { value: "doNotDisturb", known: true, source: "teams-log" } }));
+	assert.equal(s.presence?.value, "doNotDisturb");
+	assert.equal(s.presence?.known, true);
+	assert.equal(s.presence?.source, "teams-log");
+});
+
+test("an older helper without a presence field still maps mute/camera and reports unknown presence", () => {
+	// A stale helper binary emits no `presence`; the mapping must stay defensive rather than throw,
+	// which would discard the whole snapshot (dropping mute/camera too).
+	const s = mapHelperSnapshot(helperSnap());
+	assert.equal(s.state.isMuted, false, "mute still maps");
+	assert.equal(s.state.isVideoOn, true, "camera still maps");
+	assert.equal(s.presence?.value, "unknown");
+	assert.equal(s.presence?.known, false);
+	assert.equal(s.presence?.source, "none");
+});
+
+test("an unrecognised presence token renders unknown and is never surfaced as the raw token", () => {
+	const s = mapHelperSnapshot(helperSnap({ presence: { value: "Presenting", known: true, source: "teams-log" } }));
+	assert.equal(s.presence?.value, "unknown");
+	assert.equal(s.presence?.known, false);
+});
+
+test("the disabled source is preserved so the tile can tell opt-in-off from a live read", () => {
+	const s = mapHelperSnapshot(helperSnap({ presence: { value: "unknown", known: false, source: "disabled" } }));
+	assert.equal(s.presence?.source, "disabled");
+});
