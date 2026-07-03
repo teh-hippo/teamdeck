@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.8](https://github.com/teh-hippo/teamdeck/compare/v0.5.7...v0.5.8) (2026-07-03)
+
+
+### Bug Fixes
+
+* **reactions:** show each reaction's own icon on the device ([71f1157](https://github.com/teh-hippo/teamdeck/commit/71f1157c91559316eeb192c501877561400542b5))
+
 ## [0.5.7](https://github.com/teh-hippo/teamdeck/compare/v0.5.6...v0.5.7) (2026-07-02)
 
 
