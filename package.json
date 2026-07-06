@@ -34,7 +34,7 @@
 		"@rollup/plugin-node-resolve": "^15.2.2",
 		"@rollup/plugin-terser": "^1.0.0",
 		"@rollup/plugin-typescript": "^12.1.0",
-		"@tsconfig/node20": "^20.1.2",
+		"@tsconfig/node22": "^22.0.0",
 		"@types/node": "~24.1.0",
 		"rollup": "^4.0.2",
 		"sharp": "0.35.1",
