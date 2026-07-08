@@ -13,98 +13,20 @@ use uiautomation::events::{
     CustomEventHandlerFn, CustomPropertyChangedEventHandlerFn, UIEventHandler, UIEventType,
     UIPropertyChangedEventHandler,
 };
-use uiautomation::patterns::{UIExpandCollapsePattern, UILegacyIAccessiblePattern};
-use uiautomation::types::{ExpandCollapseState, Handle, TreeScope, UIProperty};
-use uiautomation::variants::Variant;
+use uiautomation::types::{Handle, TreeScope, UIProperty};
 use uiautomation::{UIAutomation, UIElement};
 
+mod command;
 mod labels;
+mod meeting;
 mod presence;
 mod snapshot;
 
+use command::{handle_command, parse_log_reading_cmd, Handled};
 use labels::{label_signal, teams_webcam_in_use, CAMERA_LABELS, HAND_LABELS, MUTE_LABELS};
+use meeting::{cached_name, locate_meeting, top_cache_request, MeetingCache};
 use presence::presence_reader_loop;
 use snapshot::{known, now_ms, Presence, PresenceState, Signal, Signals, Snapshot, WindowInfo};
-
-fn has_id(automation: &UIAutomation, parent: &UIElement, aid: &str) -> bool {
-    find_first_id(automation, parent, aid).is_some()
-}
-
-/// Cache request prefetching ClassName+Name so the top-level walk reads them locally (no per-window round-trip).
-fn top_cache_request(
-    automation: &UIAutomation,
-) -> uiautomation::Result<uiautomation::core::UICacheRequest> {
-    let req = automation.create_cache_request()?;
-    req.add_property(UIProperty::ClassName)?;
-    req.add_property(UIProperty::Name)?;
-    Ok(req)
-}
-
-/// Caches the meeting HWND and its control elements (mic/camera/hangup) for reads and toggles; entries are validated live on use and cleared on HWND change.
-struct MeetingCache {
-    hwnd: Option<isize>,
-    elems: Vec<(&'static str, UIElement)>,
-}
-
-impl MeetingCache {
-    fn new() -> Self {
-        MeetingCache {
-            hwnd: None,
-            elems: Vec::new(),
-        }
-    }
-
-    /// Points the cache at `hwnd`, clearing cached elements when the window changes.
-    fn rebind(&mut self, hwnd: Option<isize>) {
-        if self.hwnd != hwnd {
-            self.hwnd = hwnd;
-            self.elems.clear();
-        }
-    }
-
-    fn get(&self, aid: &str) -> Option<&UIElement> {
-        self.elems.iter().find(|(a, _)| *a == aid).map(|(_, e)| e)
-    }
-
-    fn put(&mut self, aid: &'static str, el: UIElement) {
-        self.elems.retain(|(a, _)| *a != aid);
-        self.elems.push((aid, el));
-    }
-
-    fn drop_elem(&mut self, aid: &str) {
-        self.elems.retain(|(a, _)| *a != aid);
-    }
-}
-
-/// The control element for `aid`: a cached element re-validated by a live AutomationId read (dropped + re-found if stale), else found and cached. None if absent.
-fn cached_elem(
-    automation: &UIAutomation,
-    cache: &mut MeetingCache,
-    meeting: &UIElement,
-    aid: &'static str,
-) -> Option<UIElement> {
-    if let Some(el) = cache.get(aid) {
-        if matches!(el.get_automation_id(), Ok(ref a) if a == aid) {
-            return Some(el.clone());
-        }
-        cache.drop_elem(aid);
-    }
-    let el = find_first_id(automation, meeting, aid)?;
-    cache.put(aid, el.clone());
-    Some(el)
-}
-
-/// A cached control's UIA Name (for the localised mute/camera labels), re-finding if stale. None if absent.
-fn cached_name(
-    automation: &UIAutomation,
-    cache: &mut MeetingCache,
-    meeting: &UIElement,
-    aid: &'static str,
-) -> Option<String> {
-    cached_elem(automation, cache, meeting, aid)?
-        .get_name()
-        .ok()
-}
 
 fn build_snapshot(
     automation: &UIAutomation,
@@ -193,207 +115,6 @@ fn build_snapshot(
     }
 
     snap
-}
-
-/// Resolves the meeting window, preferring the cached HWND over a scan of the top-level `TeamsWebView`
-/// candidates already enumerated by `build_snapshot` (so no second top-level enumeration). Clears the
-/// cache when the window is gone or not a TeamsWebView; a wrong-window bind self-heals via the
-/// caller's mic read.
-fn locate_meeting(
-    automation: &UIAutomation,
-    cache: &mut MeetingCache,
-    candidates: &[UIElement],
-) -> Option<UIElement> {
-    if let Some(h) = cache.hwnd {
-        if let Ok(el) = automation.element_from_handle(Handle::from(h)) {
-            if el
-                .get_classname()
-                .map(|c| c == "TeamsWebView")
-                .unwrap_or(false)
-            {
-                return Some(el);
-            }
-        }
-        cache.rebind(None);
-    }
-    let m = candidates
-        .iter()
-        .find(|w| is_meeting_window(automation, w))?
-        .clone();
-    cache.rebind(m.get_native_window_handle().ok().map(|h| h.into()));
-    Some(m)
-}
-
-/// A top-level TeamsWebView containing both microphone- and hangup-button (an active meeting).
-fn is_meeting_window(automation: &UIAutomation, w: &UIElement) -> bool {
-    w.get_classname().unwrap_or_default() == "TeamsWebView"
-        && has_id(automation, w, "microphone-button")
-        && has_id(automation, w, "hangup-button")
-}
-
-/// Finds the active meeting window (TeamsWebView containing both microphone- and hangup-button).
-fn find_meeting_window(automation: &UIAutomation) -> Option<UIElement> {
-    let root = automation.get_root_element().ok()?;
-    let true_cond = automation.create_true_condition().ok()?;
-    let top = root.find_all(TreeScope::Children, &true_cond).ok()?;
-    top.into_iter().find(|w| is_meeting_window(automation, w))
-}
-
-/// The top-level TeamsWebView windows (meeting-window candidates) for `locate_meeting`. The snapshot
-/// path collects these inline during its single top-level pass; the command path enumerates here.
-fn top_teamswebviews(automation: &UIAutomation) -> Vec<UIElement> {
-    let (Ok(root), Ok(true_cond)) = (
-        automation.get_root_element(),
-        automation.create_true_condition(),
-    ) else {
-        return Vec::new();
-    };
-    let Ok(top) = root.find_all(TreeScope::Children, &true_cond) else {
-        return Vec::new();
-    };
-    top.into_iter()
-        .filter(|w| w.get_classname().unwrap_or_default() == "TeamsWebView")
-        .collect()
-}
-
-fn find_first_id(automation: &UIAutomation, parent: &UIElement, aid: &str) -> Option<UIElement> {
-    let cond = automation
-        .create_property_condition(UIProperty::AutomationId, Variant::from(aid), None)
-        .ok()?;
-    parent.find_first(TreeScope::Descendants, &cond).ok()
-}
-
-/// Actuates a control via the fast, focus-free MSAA default action (`accDoDefaultAction`); no focus/foreground change and no Invoke fallback needed (verified live across every control exercised; leave/hangup shares the same path).
-fn actuate(el: &UIElement) -> bool {
-    matches!(el.get_pattern::<UILegacyIAccessiblePattern>(), Ok(p) if p.do_default_action().is_ok())
-}
-
-/// Runs a flyout action on a short-lived worker (own `UIAutomation`, no event handlers) so a slow `expand()` can't freeze the snapshot stream. Resolves the meeting from the cached HWND.
-fn run_flyout_worker(hwnd: Option<isize>, aid: &str) -> bool {
-    let Ok(automation) = UIAutomation::new() else {
-        return false;
-    };
-    let meeting = hwnd
-        .and_then(|h| automation.element_from_handle(Handle::from(h)).ok())
-        .filter(|el| is_meeting_window(&automation, el))
-        .or_else(|| find_meeting_window(&automation));
-    match meeting {
-        Some(m) => run_flyout(&automation, &m, aid),
-        None => false,
-    }
-}
-
-/// Opens the React flyout, actuates the item by AutomationId, then closes it. Focus-free throughout.
-fn run_flyout(automation: &UIAutomation, meeting: &UIElement, aid: &str) -> bool {
-    let Some(react) = find_first_id(automation, meeting, "reaction-menu-button") else {
-        return false;
-    };
-    let ec = react.get_pattern::<UIExpandCollapsePattern>().ok();
-    if let Some(p) = &ec {
-        let _ = p.expand();
-    }
-    // The flyout DOM builds lazily (~95ms in the live spike); poll for the item up to ~750ms, but try
-    // immediately first (the menu may already be open from a prior action).
-    let mut ok = false;
-    for i in 0..15 {
-        if i > 0 {
-            std::thread::sleep(Duration::from_millis(50));
-        }
-        if let Some(el) = find_first_id(automation, meeting, aid) {
-            ok = actuate(&el);
-            break;
-        }
-    }
-    close_flyout(automation, meeting, &react, ec.as_ref());
-    ok
-}
-
-/// Closes the React flyout deterministically: `collapse()`, and only if still Expanded re-actuate the React button (re-invoking an already-closed menu would re-open it); then wait up to ~500ms for microphone-button to return so the disrupted tree never leaks into the next command.
-fn close_flyout(
-    automation: &UIAutomation,
-    meeting: &UIElement,
-    react: &UIElement,
-    ec: Option<&UIExpandCollapsePattern>,
-) {
-    // No ExpandCollapse pattern means the flyout was never opened: nothing to close, no wait.
-    let Some(p) = ec else {
-        return;
-    };
-    let _ = p.collapse();
-    if matches!(p.get_state(), Ok(ExpandCollapseState::Expanded)) {
-        let _ = actuate(react);
-    }
-    for _ in 0..10 {
-        if find_first_id(automation, meeting, "microphone-button").is_some() {
-            return;
-        }
-        std::thread::sleep(Duration::from_millis(50));
-    }
-}
-
-fn react_id(kind: &str) -> Option<&'static str> {
-    Some(match kind {
-        "like" => "like-button",
-        "love" => "heart-button",
-        "laugh" => "laugh-button",
-        "surprised" => "surprised-button",
-        "applause" => "applause-button",
-        _ => return None,
-    })
-}
-
-/// What a command verb maps to, decided without touching UIA (unit-testable). `Noop` never actuates.
-#[derive(Debug, PartialEq, Eq)]
-enum Action {
-    /// Actuate a single control by AutomationId (mute / camera / leave / raise-hand).
-    Toggle(&'static str),
-    /// Open the React flyout and actuate an item by AutomationId (reactions).
-    Flyout(&'static str),
-    /// Unknown verb or unrecognised reaction: do nothing, report ok:false, no retry.
-    Noop,
-}
-
-/// Maps a wire verb (and optional arg) to its control action, purely (no UIA). See `Action`.
-fn route(verb: &str, arg: Option<&str>) -> Action {
-    match verb {
-        "toggle-mute" => Action::Toggle("microphone-button"),
-        "toggle-camera" => Action::Toggle("video-button"),
-        "leave" => Action::Toggle("hangup-button"),
-        // Raise-hand is a main-toolbar button again (a peer of mic/camera), so actuate it directly
-        // via the focus-free MSAA path (do_default_action), like mute. If Teams moves it back under
-        // the React flyout the button goes absent and act_toggle surfaces ok:false; note a
-        // reworked-but-present control could no-op silently, as do_default_action reports success.
-        "raise-hand" => Action::Toggle("raisehands-button"),
-        "react" => match arg.and_then(react_id) {
-            Some(id) => Action::Flyout(id),
-            None => Action::Noop,
-        },
-        _ => Action::Noop,
-    }
-}
-
-/// Actuates a toggle control (mute/camera/leave) on the cached window, re-finding once if it's absent so a press is never silently dropped. Runs inline (DoDefaultAction is fast).
-fn act_toggle(automation: &UIAutomation, cache: &mut MeetingCache, aid: &'static str) -> bool {
-    // Fast path: a valid cached window actuates with no top-level enumeration (the common in-call case).
-    if let Some(m) = locate_meeting(automation, cache, &[]) {
-        if let Some(el) = cached_elem(automation, cache, &m, aid) {
-            let ok = actuate(&el);
-            // Validated element that still didn't actuate (transient rebuild): drop it so the next press/tick re-finds; no in-call retry.
-            if !ok {
-                cache.drop_elem(aid);
-            }
-            return ok;
-        }
-    }
-    // Cache empty/stale or control absent: enumerate once and retry against a fresh meeting.
-    cache.rebind(None);
-    let candidates = top_teamswebviews(automation);
-    match locate_meeting(automation, cache, &candidates) {
-        Some(m) => cached_elem(automation, cache, &m, aid)
-            .map(|el| actuate(&el))
-            .unwrap_or(false),
-        None => false,
-    }
 }
 
 /// Messages the serve loop multiplexes: a stdin command, a state-changed ping from a UIA handler, and a worker's result line.
@@ -756,73 +477,6 @@ fn serve(automation: &UIAutomation) {
     std::process::exit(0);
 }
 
-/// Outcome of handling one command line, returned to the serve loop.
-enum Handled {
-    /// Keep serving; `snapshot` requests an immediate post-command snapshot (true for inline toggle/noop, false for flyout).
-    Go { snapshot: bool },
-    /// The stdout pipe broke (parent gone): stop serving.
-    Stop,
-}
-
-/// Detects the presence opt-in command `{"cmd":"set-log-reading","arg":"on|off"}`, returning the
-/// desired enabled state. `None` for any other line, so normal commands fall through to `handle_command`.
-fn parse_log_reading_cmd(line: &str) -> Option<bool> {
-    let cmd = serde_json::from_str::<serde_json::Value>(line.trim()).ok()?;
-    if cmd.get("cmd").and_then(|v| v.as_str())? != "set-log-reading" {
-        return None;
-    }
-    match cmd.get("arg").and_then(|v| v.as_str())? {
-        "on" => Some(true),
-        "off" => Some(false),
-        _ => None,
-    }
-}
-
-/// Parses one command line and acts: toggles run inline and emit immediately; flyout actions run on a worker that funnels its result via `Msg::Result`.
-fn handle_command(
-    automation: &UIAutomation,
-    cache: &mut MeetingCache,
-    line: &str,
-    tx: &Sender<Msg>,
-) -> Handled {
-    let line = line.trim();
-    if line.is_empty() {
-        return Handled::Go { snapshot: false };
-    }
-    let Ok(cmd) = serde_json::from_str::<serde_json::Value>(line) else {
-        return Handled::Go { snapshot: false };
-    };
-    let verb = cmd.get("cmd").and_then(|v| v.as_str()).unwrap_or("");
-    let arg = cmd.get("arg").and_then(|v| v.as_str());
-    match route(verb, arg) {
-        Action::Flyout(aid) => {
-            let hwnd = cache.hwnd;
-            let verb = verb.to_string();
-            let arg = arg.map(str::to_string);
-            let tx = tx.clone();
-            std::thread::spawn(move || {
-                let ok = run_flyout_worker(hwnd, aid);
-                let _ = tx.send(Msg::Result(result_line(&verb, arg.as_deref(), ok)));
-            });
-            Handled::Go { snapshot: false }
-        }
-        Action::Toggle(aid) => {
-            if emit_line(&result_line(verb, arg, act_toggle(automation, cache, aid))) {
-                Handled::Go { snapshot: true }
-            } else {
-                Handled::Stop
-            }
-        }
-        Action::Noop => {
-            if emit_line(&result_line(verb, arg, false)) {
-                Handled::Go { snapshot: true }
-            } else {
-                Handled::Stop
-            }
-        }
-    }
-}
-
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let automation = match UIAutomation::new() {
@@ -854,40 +508,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn react_id_maps_every_reaction() {
-        assert_eq!(react_id("like"), Some("like-button"));
-        assert_eq!(react_id("love"), Some("heart-button"));
-        assert_eq!(react_id("laugh"), Some("laugh-button"));
-        assert_eq!(react_id("surprised"), Some("surprised-button"));
-        assert_eq!(react_id("applause"), Some("applause-button"));
-        assert_eq!(react_id("nope"), None);
-    }
-
-    #[test]
-    fn route_maps_verbs_and_treats_unknowns_as_noop() {
-        assert_eq!(
-            route("toggle-mute", None),
-            Action::Toggle("microphone-button")
-        );
-        assert_eq!(route("toggle-camera", None), Action::Toggle("video-button"));
-        assert_eq!(route("leave", None), Action::Toggle("hangup-button"));
-        assert_eq!(
-            route("raise-hand", None),
-            Action::Toggle("raisehands-button")
-        );
-        assert_eq!(route("react", Some("like")), Action::Flyout("like-button"));
-        assert_eq!(
-            route("react", Some("surprised")),
-            Action::Flyout("surprised-button")
-        );
-        // Unknown verb and unrecognised reaction collapse to Noop: ok:false, and crucially no
-        // stale-cache retry (so a bad command can never be mistaken for a stale window or double-act).
-        assert_eq!(route("react", Some("nope")), Action::Noop);
-        assert_eq!(route("react", None), Action::Noop);
-        assert_eq!(route("bogus", None), Action::Noop);
-    }
-
-    #[test]
     fn result_line_is_byte_stable() {
         // The plugin parses these JSON-order-independently, but the bytes are locked so a refactor
         // can't silently change the wire result contract (serde_json sorts keys: arg, cmd, ok, type).
@@ -899,27 +519,6 @@ mod tests {
             result_line("react", Some("like"), false),
             r#"{"arg":"like","cmd":"react","ok":false,"type":"result"}"#
         );
-    }
-
-    #[test]
-    fn meeting_cache_rebind_tracks_hwnd_and_is_idempotent() {
-        // The element-bearing paths (put/get/validated reuse across a control-bar rebuild) are
-        // exercised live -- a UIElement is a COM wrapper that can't be built in a unit test -- so this
-        // locks the pure HWND state machine: a new cache is empty, rebinding to the same window is a
-        // no-op, and any window change re-points the cache (dropping the now-foreign elements).
-        let mut c = MeetingCache::new();
-        assert_eq!(c.hwnd, None);
-        assert!(c.get("microphone-button").is_none());
-        c.rebind(Some(10));
-        assert_eq!(c.hwnd, Some(10));
-        c.rebind(Some(10)); // same window: idempotent
-        assert_eq!(c.hwnd, Some(10));
-        c.rebind(Some(20)); // changed window: re-point
-        assert_eq!(c.hwnd, Some(20));
-        c.drop_elem("microphone-button"); // safe on an empty element set
-        c.rebind(None);
-        assert_eq!(c.hwnd, None);
-        assert!(c.get("video-button").is_none());
     }
 
     #[test]
@@ -976,24 +575,5 @@ mod tests {
             idle,
             "out of a meeting: long backstop, events catch a meeting starting"
         );
-    }
-
-    #[test]
-    fn parse_log_reading_cmd_detects_the_opt_in_only() {
-        assert_eq!(
-            parse_log_reading_cmd(r#"{"cmd":"set-log-reading","arg":"on"}"#),
-            Some(true)
-        );
-        assert_eq!(
-            parse_log_reading_cmd(r#"{"cmd":"set-log-reading","arg":"off"}"#),
-            Some(false)
-        );
-        // A bad arg, a different verb, and non-JSON all fall through to the normal command path.
-        assert_eq!(
-            parse_log_reading_cmd(r#"{"cmd":"set-log-reading","arg":"maybe"}"#),
-            None
-        );
-        assert_eq!(parse_log_reading_cmd(r#"{"cmd":"toggle-mute"}"#), None);
-        assert_eq!(parse_log_reading_cmd("not json"), None);
     }
 }
