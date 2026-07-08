@@ -4,6 +4,7 @@
 //! Emits the snapshot contract as one JSON object per line on stdout.
 
 mod command;
+mod handlers;
 mod labels;
 mod meeting;
 mod presence;
