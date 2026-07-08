@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.2](https://github.com/teh-hippo/teamdeck/compare/v0.6.1...v0.6.2) (2026-07-08)
+
+
+### Miscellaneous Chores
+
+* release 0.6.2 ([c65e378](https://github.com/teh-hippo/teamdeck/commit/c65e3786e27d0bd4c6cf556a8b1132652e601290))
+
 ## [0.6.1](https://github.com/teh-hippo/teamdeck/compare/v0.6.0...v0.6.1) (2026-07-03)
 
 
