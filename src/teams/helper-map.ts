@@ -31,7 +31,6 @@ const KNOWN_PRESENCES = new Set<Presence>([
 	"unknown",
 ]);
 
-/** The snapshot used when the helper is not running. */
 export const HELPER_DISCONNECTED: TeamsSnapshot = {
 	connected: false,
 	state: {},
@@ -40,9 +39,7 @@ export const HELPER_DISCONNECTED: TeamsSnapshot = {
 	presence: { value: "unknown", known: false, source: "none" },
 };
 
-/** Whether a signal carries a value the UI can trust: the helper marked it available and it is not
- * null. A signal that is available but null (value unknown) must render "unknown" rather than a fake
- * off state, so both the mapped state value and the availability map derive from this one predicate. */
+/** Whether a signal carries a trustworthy value: available and non-null. An available-but-null signal renders "unknown", so state and availability both derive from this one predicate. */
 function isKnown(sig: HelperSignal): boolean {
 	return sig.available && sig.value !== null;
 }
@@ -52,9 +49,7 @@ function known(sig: HelperSignal): boolean | undefined {
 	return isKnown(sig) ? (sig.value ?? undefined) : undefined;
 }
 
-/** Maps the helper's presence field defensively: an absent field (older helper) or an unrecognised
- * token becomes "unknown" rather than throwing — a throw here would discard the whole snapshot and
- * drop mute/camera too. */
+/** Maps the helper's presence field defensively: an absent (older helper) or unrecognised token becomes "unknown" rather than throwing, which would discard the whole snapshot (mute/camera too). */
 function mapPresence(p: HelperPresence | undefined): PresenceInfo {
 	if (!p || typeof p.value !== "string") {
 		return { value: "unknown", known: false, source: "none" };
@@ -67,15 +62,7 @@ function mapPresence(p: HelperPresence | undefined): PresenceInfo {
 	};
 }
 
-/**
- * Maps a helper snapshot onto the plugin's `TeamsSnapshot`.
- *
- * The legacy third-party API supplied a `meetingPermissions` object and full `meetingState`; the
- * UIA helper has neither. So permissions are **synthesized** from what the helper can observe/act
- * on (panel finding B1), and an **availability** map marks fields the helper cannot read so keys
- * render "unknown" instead of a fake on/off (B2). `value: true` means muted / camera-on /
- * hand-raised / sharing, matching `MeetingState`.
- */
+/** Maps a helper snapshot onto the plugin's `TeamsSnapshot`. The UIA helper has no permissions/state API, so permissions are synthesised from what it can observe/actuate, and an availability map flags fields it can't read (so keys render "unknown", not a fake on/off). `value: true` means muted / camera-on / hand-raised / sharing. */
 export function mapHelperSnapshot(h: HelperSnapshot): TeamsSnapshot {
 	const s = h.signals;
 	const inMeeting = h.inMeeting;
@@ -88,9 +75,7 @@ export function mapHelperSnapshot(h: HelperSnapshot): TeamsSnapshot {
 		isSharing: known(s.sharing),
 	};
 
-	// A key is actionable only in a meeting; mute/camera/hand also require that the helper can read
-	// the control's state label, so an unreadable label greys and disables the key. Leave/react are
-	// control-only (no readable state) but available in a meeting.
+	// A key is actionable only in a meeting; mute/camera/hand also need a readable state label (an unreadable one greys and disables the key), while leave/react are control-only but available in a meeting.
 	const permissions: Partial<MeetingPermissions> = {
 		canToggleMute: inMeeting && s.mute.available,
 		canToggleVideo: inMeeting && s.camera.available,
@@ -107,9 +92,7 @@ export function mapHelperSnapshot(h: HelperSnapshot): TeamsSnapshot {
 		isSharing: isKnown(s.sharing),
 	};
 
-	// The helper tags a control whose Name it could not interpret as `uia-label?:<name>`. Surface
-	// those so a Teams wording change or unsupported locale is diagnosable instead of silently
-	// greying the key out.
+	// The helper tags a control whose Name it could not interpret as `uia-label?:<name>`; surface those so a Teams wording change or unsupported locale is diagnosable rather than a silently greyed key.
 	const labelIssues: string[] = [];
 	for (const [control, signal] of Object.entries(s)) {
 		if (signal.source.startsWith("uia-label?:")) {

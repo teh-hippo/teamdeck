@@ -11,21 +11,17 @@ const MAX_RESTART_DELAY = 30_000;
 
 type HelperMessage = HelperSnapshot & { type?: string; ok?: boolean; cmd?: string };
 
-/** The minimal logger surface the client uses; injectable so unit tests can supply a double. */
+/** Minimal logger surface; injectable so tests can supply a double. */
 type HelperLogger = { info(message: string): void; warn(message: string): void };
 
-/** Dependencies, defaulted to production wiring and overridden in unit tests. */
+/** Injectable deps; default to production wiring, overridden in tests. */
 type HelperDeps = {
 	spawn?: typeof nodeSpawn;
 	helperPath?: () => string | undefined;
 	logger?: HelperLogger;
 };
 
-/**
- * A Teams source backed by the native UI-Automation helper (built from `native/`, shipped as
- * `bin/teamdeck-helper.exe`). Spawns it in `serve` mode, parses its newline-delimited snapshot
- * stream, and sends control commands on stdin.
- */
+/** Teams source backed by the native UIA helper (bin/teamdeck-helper.exe): spawns it in `serve` mode, parses its newline-delimited snapshots, and sends commands on stdin. */
 export class HelperClient {
 	#proc?: ChildProcess;
 	#stopped = true;
@@ -33,8 +29,7 @@ export class HelperClient {
 	#restartDelay = 1_000;
 	#restartTimer?: ReturnType<typeof setTimeout>;
 	#lastLabelIssues = "";
-	// Whether the user has opted in to reading presence from the Teams log. Off by default; re-sent
-	// to the helper on every (re)spawn so a restarted helper re-learns it.
+	// Whether the user opted in to reading presence from the Teams log; off by default, re-sent on every (re)spawn so a restarted helper re-learns it.
 	#logReadingEnabled = false;
 	readonly #listeners = new Set<Listener>();
 
@@ -52,7 +47,6 @@ export class HelperClient {
 		return this.#snapshot;
 	}
 
-	/** Whether the helper child process is currently running (surfaced to the property inspector). */
 	get running(): boolean {
 		return this.#proc !== undefined && !this.#stopped;
 	}
@@ -69,9 +63,7 @@ export class HelperClient {
 			return;
 		}
 		this.#stopped = false;
-		// Clear any snapshot from a previous run so a restart never shows a dead helper's stale state.
-		// Stamp the current opt-in (set moments earlier by setLogReadingEnabled) so the pre-first-snapshot
-		// window reflects it rather than dropping to undefined.
+		// Clear stale state and stamp the current opt-in so the pre-first-snapshot window reflects it, not undefined.
 		this.#snapshot = { ...HELPER_DISCONNECTED, logReadingAllowed: this.#logReadingEnabled };
 		this.#spawn();
 	}
@@ -99,9 +91,7 @@ export class HelperClient {
 		}
 	}
 
-	/** Replaces a helper whose stdin broke (failed or unwritable write) before its 'close' landed,
-	 * when #proc is still set and recover() would no-op. Kills the dead child and respawns now; its
-	 * later 'close' is ignored by #spawn's `#proc !== proc` guard. Inert once stopped. */
+	/** Replaces a helper whose stdin broke before its 'close' landed (when #proc is still set, so recover() would no-op). Its later 'close' is ignored by #spawn's `#proc !== proc` guard. Inert once stopped. */
 	#killAndRespawn(): void {
 		if (this.#stopped) {
 			return;
@@ -137,12 +127,7 @@ export class HelperClient {
 		this.#send("react", type === "wow" ? "surprised" : type);
 	}
 
-	/**
-	 * Enables or disables reading presence from the Teams log (the "Allow reading status via Teams
-	 * logs" opt-in). Stores the desired state, tells the live helper, and re-broadcasts so the
-	 * Availability tile reflects the change immediately. The value is re-asserted on every helper
-	 * (re)spawn (see `#spawn`).
-	 */
+	/** Enables/disables reading presence from the Teams log. Stores the state, tells the live helper, and re-broadcasts so the tile updates now; re-asserted on every (re)spawn. */
 	setLogReadingEnabled(on: boolean): void {
 		this.#logReadingEnabled = on;
 		this.#sendControl("set-log-reading", on ? "on" : "off");
@@ -150,11 +135,7 @@ export class HelperClient {
 		this.#setSnapshot(this.#snapshot);
 	}
 
-	/**
-	 * Writes a control command directly to the live helper's stdin. Unlike `#send`, it never
-	 * respawns on an unwritable pipe — the `#spawn` re-send covers a dead/replacing helper, so this
-	 * cannot recurse into a respawn loop.
-	 */
+	/** Writes a control command to the live helper's stdin. Unlike `#send` it never respawns on an unwritable pipe (the `#spawn` re-send covers that), so it can't recurse into a respawn loop. */
 	#sendControl(cmd: string, arg: string): void {
 		const stdin = this.#proc?.stdin;
 		if (!stdin?.writable) {
@@ -177,8 +158,7 @@ export class HelperClient {
 		try {
 			stdin.write(`${JSON.stringify(arg === undefined ? { cmd } : { cmd, arg })}\n`);
 		} catch (err) {
-			// The process can die between the writable check and the write (EPIPE): the pipe is gone
-			// but 'close' has not landed yet, so respawn now instead of dropping the press.
+			// EPIPE between the writable check and the write (pipe gone, 'close' not landed yet): respawn now instead of dropping the press.
 			this.#log.warn(`Teams helper write failed for "${cmd}": ${String(err)}`);
 			this.#killAndRespawn();
 		}
@@ -206,8 +186,7 @@ export class HelperClient {
 		proc.stdin?.on("error", (err) => this.#log.warn(`Teams helper stdin error: ${err.message}`));
 		proc.on("spawn", () => {
 			this.#log.info("Teams UIA helper started.");
-			// Re-assert the presence opt-in so a freshly (re)spawned helper — which defaults to OFF —
-			// re-learns it. Done here (after spawn, stdin writable) via the non-respawning #sendControl.
+			// Re-assert the presence opt-in so a freshly (re)spawned helper (defaults OFF) re-learns it, via the non-respawning #sendControl.
 			this.#sendControl("set-log-reading", this.#logReadingEnabled ? "on" : "off");
 		});
 		const handleGone = (reason: string): void => {
@@ -225,8 +204,7 @@ export class HelperClient {
 			this.#log.warn(`Teams UIA helper error: ${err.message}`);
 			handleGone("failed to start");
 		});
-		// 'close' always fires once the process is gone (after 'exit', or after 'error' when the
-		// helper never started), so recovery cannot stall on a spawn error that emits no 'exit'.
+		// 'close' always fires once the process is gone (after 'exit', or after 'error'), so recovery cannot stall on a spawn error that emits no 'exit'.
 		proc.on("close", (code) => handleGone(`exited (code ${code ?? "?"})`));
 	}
 
@@ -264,16 +242,13 @@ export class HelperClient {
 			this.#log.warn(`Ignoring malformed Teams helper snapshot: ${String(err)}`);
 			return;
 		}
-		// A healthy helper is emitting snapshots, so reset the restart backoff here rather than on
-		// 'spawn' (which fires before the helper has proven it can stay up).
+		// A healthy helper is emitting snapshots, so reset the restart backoff here rather than on 'spawn' (which fires before it has proven it can stay up).
 		this.#restartDelay = 1_000;
 		this.#setSnapshot(snapshot);
 		this.#reportLabelIssues(snapshot.labelIssues);
 	}
 
-	/** Logs (throttled) when the helper reports a control whose UIA label it could not interpret, so
-	 * a Teams wording change or an unsupported display language is visible rather than a silently
-	 * greyed-out key. Re-logs only when the set of unrecognised labels changes. */
+	/** Logs (throttled) when the helper reports a control label it could not interpret, so a Teams wording/locale change is visible rather than a silently greyed key. Re-logs only when the set changes. */
 	#reportLabelIssues(issues: string[] | undefined): void {
 		const key = (issues ?? []).join(" | ");
 		if (key === this.#lastLabelIssues) {
@@ -286,16 +261,14 @@ export class HelperClient {
 	}
 
 	#setSnapshot(snapshot: TeamsSnapshot): void {
-		// Stamp the client-owned opt-in onto every broadcast so the Availability tile paints from the
-		// persisted setting rather than the helper's lagging `source`, and updates the moment it toggles.
+		// Stamp the client-owned opt-in onto every broadcast so the Availability tile paints from the persisted setting, not the helper's lagging `source`.
 		this.#snapshot = { ...snapshot, logReadingAllowed: this.#logReadingEnabled };
 		for (const listener of this.#listeners) {
 			this.#notify(listener, this.#snapshot);
 		}
 	}
 
-	/** Delivers a snapshot to one listener, isolating a throwing subscriber so it can neither abort
-	 * the fan-out nor escape as an uncaught exception that would crash the plugin. */
+	/** Delivers a snapshot to one listener, isolating a throwing subscriber so it can't abort the fan-out or crash the plugin. */
 	#notify(listener: Listener, snapshot: TeamsSnapshot): void {
 		try {
 			listener(snapshot);

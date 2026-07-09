@@ -34,8 +34,7 @@ pub(crate) fn build_snapshot(
         presence: presence.clone(),
     };
 
-    // Top-level pass: collect Teams-running (any TeamsWebView), screen-sharing (the sibling "Sharing
-    // control bar" window) and the TeamsWebView meeting candidates, all from one cached round-trip.
+    // One cached top-level pass: Teams-running (any TeamsWebView), screen-sharing (sibling "Sharing control bar" window), and the TeamsWebView meeting candidates.
     let mut sharing = false;
     let mut candidates: Vec<UIElement> = Vec::new();
     if let (Ok(root), Ok(true_cond), Ok(req)) = (
@@ -79,9 +78,7 @@ pub(crate) fn build_snapshot(
                         None => Signal::unknown(),
                     },
                 };
-                // Hand state is read from the toolbar raise-hand button's localised Name (the action
-                // verb), like mute/camera. May be absent in channel-meeting / live-event / 1:1
-                // variants, in which case it renders unknown.
+                // Hand state from the toolbar raise-hand button's localised Name (the action verb), like mute/camera; absent in some channel-meeting / live-event / 1:1 variants, where it renders unknown.
                 snap.signals.hand = match cached_name(automation, cache, &m, "raisehands-button") {
                     Some(n) => label_signal(&n, HAND_LABELS),
                     None => Signal::unknown(),
@@ -92,9 +89,7 @@ pub(crate) fn build_snapshot(
         }
     }
 
-    // A stale last-known presence must not linger once Teams is gone: downgrade to Unknown while
-    // keeping `source` so the plugin can still tell opt-in-off (`disabled`) from a running read
-    // (`teams-log`). The log-derived value only means anything while Teams is alive to write it.
+    // Teams gone: downgrade a stale last-known presence to Unknown but keep `source`, so the plugin can still tell opt-in-off (`disabled`) from a running read (`teams-log`).
     if !snap.teams_running && snap.presence.value != Presence::Unknown {
         snap.presence.value = Presence::Unknown;
         snap.presence.known = false;
@@ -167,10 +162,7 @@ fn loop_wait(dirty: bool, since_emit: Duration, debounce: Duration, tick: Durati
     }
 }
 
-/// The backstop interval between forced resnapshots, chosen by meeting state. The event handlers
-/// (window open/close, mic/camera Name changes) drive real state changes, so this only reconciles a
-/// *missed* event: short in a meeting (bounds a missed mute/leave) and long otherwise, where a
-/// window-open event catches a meeting starting and nothing else needs polling.
+/// The backstop resnapshot interval, chosen by meeting state. Event handlers drive real changes, so this only reconciles a *missed* event: short in a meeting (bounds a missed mute/leave), long otherwise (a window-open event catches a meeting starting).
 fn effective_tick(in_meeting: bool, meeting_tick: Duration, idle_tick: Duration) -> Duration {
     if in_meeting {
         meeting_tick
@@ -179,10 +171,7 @@ fn effective_tick(in_meeting: bool, meeting_tick: Duration, idle_tick: Duration)
     }
 }
 
-/// Persistent service: streams snapshot + result JSON on stdout, reads command JSON on stdin.
-/// Event-driven (Name + window handlers, ~70-100ms) over an adaptive backstop tick (short in a
-/// meeting, long otherwise; see `effective_tick`), snapshots debounced to ~150ms. Exits when stdin
-/// or stdout closes.
+/// Persistent service: streams snapshot + result JSON on stdout, reads command JSON on stdin. Event-driven (Name + window handlers) over an adaptive backstop tick (see `effective_tick`), snapshots debounced to ~150ms. Exits when stdin or stdout closes.
 pub(crate) fn serve(automation: &UIAutomation) {
     let (tx, rx) = mpsc::channel::<Msg>();
     {
@@ -206,9 +195,7 @@ pub(crate) fn serve(automation: &UIAutomation) {
         });
     }
 
-    // Opt-in gate for reading presence from the Teams log; default OFF until the plugin enables it.
-    // The background reader thread watches this and only tails the log while it is set. `presence_reseed`
-    // forces a fresh seed on every opt-in "on" so a rapid off/on re-toggle can't leave the tile stuck.
+    // Opt-in gate for reading log presence (default OFF); the reader thread tails only while it is set, and `presence_reseed` forces a fresh seed on every "on" so a rapid off/on re-toggle can't leave the tile stuck.
     let presence_enabled = Arc::new(AtomicBool::new(false));
     let presence_reseed = Arc::new(AtomicBool::new(false));
     {
@@ -231,9 +218,7 @@ pub(crate) fn serve(automation: &UIAutomation) {
     }
 
     let debounce = Duration::from_millis(150);
-    // Backstop ticks (see `effective_tick`): the event handlers do the real work, so these only
-    // reconcile a missed event. Short in a meeting bounds a missed mute/leave; long otherwise keeps
-    // the helper near-idle while window-open events catch a meeting starting.
+    // Backstop ticks (see `effective_tick`): the event handlers do the real work, so these only reconcile a missed event — short in a meeting bounds a missed mute/leave, long otherwise keeps the helper near-idle.
     let meeting_tick = Duration::from_secs(5);
     let idle_tick = Duration::from_secs(15);
     // Start "dirty" with a back-dated last-emit so the first snapshot fires immediately.
@@ -264,13 +249,10 @@ pub(crate) fn serve(automation: &UIAutomation) {
         let wait = loop_wait(dirty, last_emit.elapsed(), debounce, tick);
         match rx.recv_timeout(wait) {
             Ok(Msg::Cmd(line)) => {
-                // The opt-in gate is a serve-state flag, not a UIA control action, so handle it here
-                // rather than in `route()`/`handle_command`.
+                // The opt-in gate is a serve-state flag, not a UIA control action, so handle it here rather than in `route()`/`handle_command`.
                 if let Some(on) = parse_log_reading_cmd(&line) {
                     if on {
-                        // Request a fresh seed on every "on"; only reset the shown value to "seeking"
-                        // on a real off->on transition, so a redundant "on" doesn't flash unknown
-                        // (the reseed re-reports the current value).
+                        // Fresh seed on every "on", but reset the shown value to "seeking" only on a real off->on transition, so a redundant "on" doesn't flash unknown (the reseed re-reports the current value).
                         let was_off = !presence_enabled.swap(true, Ordering::Relaxed);
                         presence_reseed.store(true, Ordering::Relaxed);
                         if was_off {
@@ -331,8 +313,7 @@ mod tests {
 
     #[test]
     fn result_line_is_byte_stable() {
-        // The plugin parses these JSON-order-independently, but the bytes are locked so a refactor
-        // can't silently change the wire result contract (serde_json sorts keys: arg, cmd, ok, type).
+        // The bytes are locked so a refactor can't silently change the wire result contract (serde_json sorts keys: arg, cmd, ok, type).
         assert_eq!(
             result_line("toggle-mute", None, true),
             r#"{"arg":null,"cmd":"toggle-mute","ok":true,"type":"result"}"#

@@ -26,9 +26,7 @@ pub(crate) struct Signals {
     pub(crate) sharing: Signal,
 }
 
-/// Coarse Teams availability, read language-independently from the New Teams log's `UserPresenceAction`
-/// line. `Unknown` covers "not read yet", "opt-in off", "Teams not running" and the log's own
-/// `PresenceUnknown` token. Activity variants (Presenting/OutOfOffice/...) are not in the coarse log token.
+/// Coarse Teams availability, read language-independently from the New Teams log. `Unknown` covers "not read yet", "opt-in off", "Teams not running" and the log's own `PresenceUnknown` token. Activity variants (Presenting/OutOfOffice/...) aren't in the coarse log token.
 #[derive(Serialize, Clone, Copy, PartialEq, Eq, Debug)]
 #[serde(rename_all = "camelCase")]
 pub(crate) enum Presence {
@@ -41,9 +39,7 @@ pub(crate) enum Presence {
     Unknown,
 }
 
-/// The presence field of the snapshot. `source` is one of the fixed strings `teams-log` / `disabled`
-/// (the plugin also recognises `none` for an older helper) -- never raw log text -- so no log content
-/// can reach the wire via this field.
+/// The snapshot's presence field. `source` is a fixed token (`teams-log`/`disabled`; the plugin also accepts `none`), never raw log text, so no log content can reach the wire.
 #[derive(Serialize, Clone)]
 pub(crate) struct PresenceState {
     pub(crate) value: Presence,

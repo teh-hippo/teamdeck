@@ -49,9 +49,7 @@ test("isActionable gates on connected, in a meeting, and the permission", () => 
 });
 
 test("selectImage renders disabled when the field is unavailable (never fakes unknown state)", () => {
-	// Unit guard for selectImage: permission true + availability false. mapHelperSnapshot no longer
-	// produces this pair for hand (an unreadable hand now also disables the permission), but
-	// selectImage must still render disabled on unknown state regardless of the permission.
+	// selectImage guard: permission true + availability false must still render disabled on unknown state, regardless of permission (mapHelperSnapshot no longer produces this pair for hand).
 	const handUnknown: TeamsSnapshot = {
 		connected: true,
 		state: { isInMeeting: true, isHandRaised: undefined },

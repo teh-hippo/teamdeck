@@ -4,10 +4,6 @@ import { teams } from "../teams/client";
 import { MeetingKeyAction } from "./key-action";
 import { CAMERA, HAND, MUTE, selectImage } from "./toggle";
 
-/**
- * Toggles the Microsoft Teams microphone and mirrors live mute state: green when live (unmuted),
- * red when muted, greyed when not in a meeting.
- */
 @action({ UUID: "io.github.teh-hippo.teamdeck.mute" })
 export class Mute extends MeetingKeyAction {
 	constructor() {
@@ -15,10 +11,6 @@ export class Mute extends MeetingKeyAction {
 	}
 }
 
-/**
- * Toggles the Microsoft Teams camera and mirrors live state: green when on, red when off, greyed
- * when not in a meeting.
- */
 @action({ UUID: "io.github.teh-hippo.teamdeck.camera" })
 export class Camera extends MeetingKeyAction {
 	constructor() {
@@ -30,10 +22,6 @@ export class Camera extends MeetingKeyAction {
 	}
 }
 
-/**
- * Raises or lowers your hand in Microsoft Teams: highlighted when raised, neutral when lowered,
- * greyed when not in a meeting.
- */
 @action({ UUID: "io.github.teh-hippo.teamdeck.hand" })
 export class Hand extends MeetingKeyAction {
 	constructor() {

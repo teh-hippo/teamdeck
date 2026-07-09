@@ -33,9 +33,7 @@ pub(crate) const CAMERA_LABELS: &[StateLabel] = &[
     },
 ];
 
-/// Raise-hand button Name is the action verb: a "lower" verb means the hand is raised, a "raise"
-/// verb means it is lowered. Order matters: "raised" contains "raise", so the "lower" needle must be
-/// tested first, or a label mentioning "raised" could be misread as lowered.
+/// Raise-hand button Name is the action verb: "lower" => raised, "raise" => lowered. Order matters: "raised" contains "raise", so the "lower" needle must be tested first.
 pub(crate) const HAND_LABELS: &[StateLabel] = &[
     StateLabel {
         needle: "lower",
@@ -144,8 +142,7 @@ mod tests {
         assert_eq!(match_label("Raise your hand", HAND_LABELS), Some(false));
         // Case-insensitive, so a localised label in any casing still resolves.
         assert_eq!(match_label("LOWER YOUR HAND", HAND_LABELS), Some(true));
-        // Order is load-bearing: "raised" contains "raise", so a label mentioning "raised" must not
-        // collapse to lowered; the "lower" needle is tested first.
+        // Order is load-bearing: "raised" contains "raise", so the "lower" needle is tested first (a label mentioning "raised" must not collapse to lowered).
         assert_eq!(
             match_label("Hand raised, lower your hand", HAND_LABELS),
             Some(true)

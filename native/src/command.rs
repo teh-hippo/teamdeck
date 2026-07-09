@@ -23,10 +23,7 @@ fn route(verb: &str, arg: Option<&str>) -> Action {
         "toggle-mute" => Action::Toggle("microphone-button"),
         "toggle-camera" => Action::Toggle("video-button"),
         "leave" => Action::Toggle("hangup-button"),
-        // Raise-hand is a main-toolbar button again (a peer of mic/camera), so actuate it directly
-        // via the focus-free MSAA path (do_default_action), like mute. If Teams moves it back under
-        // the React flyout the button goes absent and act_toggle surfaces ok:false; note a
-        // reworked-but-present control could no-op silently, as do_default_action reports success.
+        // Raise-hand is a main-toolbar button (a peer of mic/camera), actuated directly via the focus-free MSAA path (do_default_action) like mute; if Teams moves it back under the React flyout it goes absent and act_toggle surfaces ok:false (a reworked-but-present control could instead no-op silently, as do_default_action reports success).
         "raise-hand" => Action::Toggle("raisehands-button"),
         "react" => match arg.and_then(react_id) {
             Some(id) => Action::Flyout(id),
@@ -148,8 +145,7 @@ mod tests {
             route("react", Some("surprised")),
             Action::Flyout("surprised-button")
         );
-        // Unknown verb and unrecognised reaction collapse to Noop: ok:false, and crucially no
-        // stale-cache retry (so a bad command can never be mistaken for a stale window or double-act).
+        // Unknown verb and unrecognised reaction collapse to Noop (ok:false, and crucially no stale-cache retry), so a bad command is never mistaken for a stale window or double-act.
         assert_eq!(route("react", Some("nope")), Action::Noop);
         assert_eq!(route("react", None), Action::Noop);
         assert_eq!(route("bogus", None), Action::Noop);

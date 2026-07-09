@@ -47,11 +47,7 @@ pub(crate) fn register_window_handlers(
     let closed: UIEventHandler = (Box::new({
         let tx = tx.clone();
         move |e: &UIElement, _ev| {
-            // Ping only when a tracked window closes. Transient WebView2 child windows close with an
-            // empty ClassName (verified), so empty is ignored -- treating it as relevant pinged on
-            // every tooltip/popup close. A meeting/Teams or sharing window that still carries its
-            // ClassName/Name is caught here; a leave that arrives empty is reconciled by the
-            // in-meeting backstop tick.
+            // Ping only when a tracked window closes; transient WebView2 children close with an empty ClassName (ignored, else every tooltip/popup close would ping), and a leave that arrives empty is reconciled by the in-meeting backstop tick.
             let cls = e.get_cached_classname().unwrap_or_default();
             let name = e.get_cached_name().unwrap_or_default();
             if cls == "TeamsWebView" || name.starts_with("Sharing control bar") {

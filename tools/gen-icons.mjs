@@ -34,9 +34,7 @@ const COLORS = {
 	unavailable: "#3D3D3D",
 };
 
-// Action-list glyph colour: reaction icons keep their accent (so each one is distinct); everything
-// else (toggles, status tiles, leave, brand) uses a light neutral that reads on the dark Stream
-// Deck UI. Previously every glyph used a near-black neutral and was invisible in the action list.
+// Action-list glyph colour: reactions keep their accent (so each stays distinct); everything else uses a light neutral that reads on the dark Stream Deck UI.
 const REACTION_ACCENTS = new Set(["like", "love", "applause", "laugh", "wow"]);
 const glyphColor = (colorKey) => (REACTION_ACCENTS.has(colorKey) ? COLORS[colorKey] : COLORS.listGlyph);
 

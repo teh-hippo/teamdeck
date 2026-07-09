@@ -84,10 +84,7 @@ pub(crate) fn cached_name(
         .ok()
 }
 
-/// Resolves the meeting window, preferring the cached HWND over a scan of the top-level `TeamsWebView`
-/// candidates already enumerated by `build_snapshot` (so no second top-level enumeration). Clears the
-/// cache when the window is gone or not a TeamsWebView; a wrong-window bind self-heals via the
-/// caller's mic read.
+/// Resolves the meeting window, preferring the cached HWND over a scan of the caller's `TeamsWebView` candidates (no second enumeration). Clears the cache when the cached window is gone or not a `TeamsWebView`; a wrong-window bind self-heals via the caller's mic read.
 pub(crate) fn locate_meeting(
     automation: &UIAutomation,
     cache: &mut MeetingCache,
@@ -181,8 +178,7 @@ fn run_flyout(automation: &UIAutomation, meeting: &UIElement, aid: &str) -> bool
     if let Some(p) = &ec {
         let _ = p.expand();
     }
-    // The flyout DOM builds lazily (~95ms in the live spike); poll for the item up to ~750ms, but try
-    // immediately first (the menu may already be open from a prior action).
+    // The flyout DOM builds lazily (~95ms in the live spike); poll for the item up to ~750ms, trying immediately first (the menu may already be open from a prior action).
     let mut ok = false;
     for i in 0..15 {
         if i > 0 {
@@ -247,10 +243,7 @@ mod tests {
 
     #[test]
     fn meeting_cache_rebind_tracks_hwnd_and_is_idempotent() {
-        // The element-bearing paths (put/get/validated reuse across a control-bar rebuild) are
-        // exercised live -- a UIElement is a COM wrapper that can't be built in a unit test -- so this
-        // locks the pure HWND state machine: a new cache is empty, rebinding to the same window is a
-        // no-op, and any window change re-points the cache (dropping the now-foreign elements).
+        // A UIElement is a COM wrapper (the element paths are live-only), so this locks the pure HWND state machine: empty on new, idempotent rebind, re-point on any window change.
         let mut c = MeetingCache::new();
         assert_eq!(c.hwnd, None);
         assert!(c.get("microphone-button").is_none());

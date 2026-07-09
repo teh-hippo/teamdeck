@@ -4,8 +4,7 @@ import { teams } from "../teams/client";
 import { type KeyConfig, MeetingKeyAction } from "./key-action";
 import { REACTIONS, selectReactionImage } from "./toggle";
 
-/** Builds a reaction's KeyConfig: gated on canReact, showing its own icon (colour when actionable,
- * greyed otherwise). */
+/** Builds a reaction's KeyConfig, gated on canReact. */
 function reaction(spec: (typeof REACTIONS)[keyof typeof REACTIONS]): KeyConfig {
 	return {
 		permission: "canReact",
@@ -14,7 +13,6 @@ function reaction(spec: (typeof REACTIONS)[keyof typeof REACTIONS]): KeyConfig {
 	};
 }
 
-/** Sends an applause reaction. */
 @action({ UUID: "io.github.teh-hippo.teamdeck.applause" })
 export class Applause extends MeetingKeyAction {
 	constructor() {
@@ -22,7 +20,6 @@ export class Applause extends MeetingKeyAction {
 	}
 }
 
-/** Sends a laugh reaction. */
 @action({ UUID: "io.github.teh-hippo.teamdeck.laugh" })
 export class Laugh extends MeetingKeyAction {
 	constructor() {
@@ -30,7 +27,6 @@ export class Laugh extends MeetingKeyAction {
 	}
 }
 
-/** Sends a like reaction. */
 @action({ UUID: "io.github.teh-hippo.teamdeck.like" })
 export class Like extends MeetingKeyAction {
 	constructor() {
@@ -38,7 +34,6 @@ export class Like extends MeetingKeyAction {
 	}
 }
 
-/** Sends a love reaction. */
 @action({ UUID: "io.github.teh-hippo.teamdeck.love" })
 export class Love extends MeetingKeyAction {
 	constructor() {
@@ -46,7 +41,6 @@ export class Love extends MeetingKeyAction {
 	}
 }
 
-/** Sends a "Surprised" reaction (the API's `wow`). */
 @action({ UUID: "io.github.teh-hippo.teamdeck.surprised" })
 export class Surprised extends MeetingKeyAction {
 	constructor() {

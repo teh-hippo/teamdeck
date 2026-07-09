@@ -120,8 +120,7 @@ test("maps presence from the helper field", () => {
 });
 
 test("an older helper without a presence field still maps mute/camera and reports unknown presence", () => {
-	// A stale helper binary emits no `presence`; the mapping must stay defensive rather than throw,
-	// which would discard the whole snapshot (dropping mute/camera too).
+	// A stale helper binary emits no `presence`; the mapping stays defensive rather than throw, which would discard the whole snapshot (dropping mute/camera too).
 	const s = mapHelperSnapshot(helperSnap());
 	assert.equal(s.state.isMuted, false, "mute still maps");
 	assert.equal(s.state.isVideoOn, true, "camera still maps");

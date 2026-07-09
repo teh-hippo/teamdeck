@@ -60,11 +60,7 @@ fn previous_log(dir: &Path, newest: &Path) -> Option<PathBuf> {
 /// Never engages in practice (Teams rolling logs rotate at ~2 MB) nor on small incremental reads.
 const MAX_READ: u64 = 8 * 1024 * 1024;
 
-/// Reads bytes `[start, len)` of `path`, returning the lossy text up to the last newline and the new
-/// offset (just past that newline). A trailing partial line is left for the next read so a token is
-/// never split. If the span exceeds `MAX_READ` (only possible on a seed of a huge file) it reads just
-/// the last `MAX_READ` bytes and drops the partial leading line. Returns `("", start)` when there is
-/// nothing complete to read.
+/// Reads bytes `[start, len)` of `path`, returning lossy text up to the last newline plus the new offset. A trailing partial line is held for the next read so a token is never split; a span over `MAX_READ` reads only the last `MAX_READ` bytes. Returns `("", start)` when nothing complete is available.
 fn read_appended(path: &Path, start: u64, len: u64) -> Option<(String, u64)> {
     if len <= start {
         return Some((String::new(), start));
@@ -108,13 +104,7 @@ fn map_token(token: &str) -> Option<Presence> {
     })
 }
 
-/// Extracts the last self-attributed presence from a log chunk: the newest `UserPresenceAction` line's
-/// `availability:` token. Returns only the enum -- no other text is retained, so no PII can escape.
-///
-/// Assumes `UserPresenceAction` is the signed-in user's own presence (live-verified: it carries only
-/// `cloud_context` + `availability`, no account id, and the multi-user `UserDataGlobalState` heartbeat
-/// is deliberately not parsed). If a future Teams build emits it for a second identity, last-write-wins
-/// could briefly show the wrong status -- still enum-only, never a leak.
+/// Extracts the last self-attributed presence from a log chunk (the newest `UserPresenceAction` line's `availability:` token, which carries only `cloud_context` + `availability`, no account id). Returns only the enum, so no PII can escape. The multi-user `UserDataGlobalState` heartbeat is deliberately not parsed.
 fn parse_presence(chunk: &str) -> Option<Presence> {
     chunk
         .lines()
@@ -191,15 +181,7 @@ impl PresenceReader {
     }
 }
 
-/// Background presence poller: while opt-in is on, tails the log every couple of seconds and pushes a
-/// `Msg::Presence` on each change. A presence change emits no UIA event, so this is the only driver;
-/// the interval bounds latency. `reseed` (set by the serve loop on every opt-in "on") forces a fresh
-/// full re-read even when the reader never observed an intervening "off" -- so a rapid off/on
-/// re-toggle can't leave the tile stuck on "unknown". Exits when the serve channel closes (parent gone).
-///
-/// This path shares the process with meeting-control actuation under `panic = "abort"`, so it must
-/// stay panic- and large-alloc-free (all reads are `?`/`.ok()`, indexing is newline-bounded, and
-/// `read_appended` caps the span); a panic here would abort the whole helper, not just presence.
+/// Background presence poller: while opt-in is on, tails the log every couple of seconds and pushes a `Msg::Presence` on each change (no UIA event fires for presence, so this is the only driver). `reseed` forces a fresh full re-read so a rapid off/on re-toggle can't leave the tile stuck. Must stay panic- and large-alloc-free (reads are `?`/`.ok()`, indexing is newline-bounded, `read_appended` caps the span): it shares the `panic = "abort"` process, so a panic here would abort the whole helper.
 pub(crate) fn presence_reader_loop(
     tx: Sender<Msg>,
     enabled: Arc<AtomicBool>,
@@ -217,9 +199,7 @@ pub(crate) fn presence_reader_loop(
             }
             continue;
         }
-        // Seed on the first poll after enable, or whenever the serve loop requested a reseed. Reset
-        // first so the seed re-reads the whole newest file (re-reporting the current value even if
-        // unchanged), which a re-enable without an observed "off" would otherwise miss.
+        // Seed on the first poll after enable or whenever the serve loop requested a reseed; reset first so it re-reads the whole newest file (re-reporting the current value, which a re-enable without an observed "off" would otherwise miss).
         let seed = !was_enabled || reseed.swap(false, Ordering::Relaxed);
         was_enabled = true;
         if seed {
@@ -271,18 +251,14 @@ mod tests {
 
     #[test]
     fn parse_presence_ignores_the_multi_user_heartbeat() {
-        // The BroadcastGlobalState/UserDataGlobalState heartbeat lists multiple users with unstable
-        // slot order and is NOT self-identifying, so only the self-attributed UserPresenceAction line
-        // is parsed. This anonymous heartbeat must yield nothing.
+        // The multi-user UserDataGlobalState heartbeat has unstable slot order and isn't self-identifying, so only the self-attributed UserPresenceAction line is parsed; this heartbeat must yield nothing.
         let heartbeat = "... UserDataGlobalState total number of users: 2 { availability: Busy, unread notification count: 1 } { availability: PresenceUnknown, unread notification count: 0 }";
         assert_eq!(parse_presence(heartbeat), None);
     }
 
     #[test]
     fn parse_presence_extracts_only_the_enum_and_drops_pii() {
-        // A realistic buffer: identifiers and free text surround one presence line. The parser must
-        // return only the enum -- it returns a `Presence`, so no surrounding text can escape by
-        // construction -- and a buffer with PII but no presence line must yield nothing at all.
+        // Identifiers and free text surround one presence line: the parser returns only a `Presence` (no surrounding text can escape by construction), and a buffer with PII but no presence line yields nothing.
         let pii = "\
 2026-07-03T04:00:00 <INFO> auth: signed in user alice.smith@contoso.com tenant 11111111-2222-3333-4444-555555555555 mri 8:orgid:66666666-7777-8888-9999-000000000000\n\
 2026-07-03T04:00:01 <INFO> calendar: event 'Budget review with Bob' join https://teams.microsoft.com/l/meetup-join/xyz\n";
@@ -294,8 +270,7 @@ mod tests {
 
     #[test]
     fn parse_presence_never_panics_on_arbitrary_input() {
-        // Adversarial fragments (partial lines, no newline, non-ASCII, truncated keys) must return
-        // None/Some without panicking -- the reader runs under panic=abort and must never crash.
+        // Adversarial fragments (partial lines, no newline, non-ASCII, truncated keys) must return without panicking -- the reader runs under panic=abort and must never crash.
         for bad in [
             "",
             "\n\n\n",

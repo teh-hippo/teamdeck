@@ -4,7 +4,6 @@ import { teams } from "../teams/client";
 import { MeetingKeyAction } from "./key-action";
 import { isActionable } from "./toggle";
 
-/** Leaves the current Microsoft Teams meeting. Enabled only while a meeting allows leaving. */
 @action({ UUID: "io.github.teh-hippo.teamdeck.leave" })
 export class Leave extends MeetingKeyAction {
 	constructor() {

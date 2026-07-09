@@ -11,14 +11,9 @@ import type { MeetingPermissions, TeamsSnapshot } from "../teams/types";
 import { type StatusSpec, selectStatusImage } from "./status";
 import { isActionable } from "./toggle";
 
-/** Selects the key image to render for a given Teams snapshot. */
 type ImageFor = (snapshot: TeamsSnapshot) => string;
 
-/**
- * Shared base for Teams keys that render live state. Subscribes to the client and re-renders
- * every visible instance via setImage (memoised) whenever Teams state changes; subclasses supply
- * the image selector.
- */
+/** Base for Teams keys that render live state: subscribes and re-renders every visible instance via setImage (memoised); subclasses supply the selector. */
 abstract class RenderingKeyAction extends SingletonAction {
 	readonly #lastImage = new Map<string, string>();
 	readonly #imageFor: ImageFor;
@@ -26,9 +21,7 @@ abstract class RenderingKeyAction extends SingletonAction {
 	constructor(imageFor: ImageFor) {
 		super();
 		this.#imageFor = imageFor;
-		// Re-render every visible instance whenever Teams state changes; onWillAppear handles the
-		// initial render. subscribe replays a snapshot synchronously here, but this.actions is empty
-		// at construction, so imageFor is never called before the subclass finishes constructing.
+		// Re-render every visible instance on Teams state change (onWillAppear does the initial render); this.actions is empty at construction, so the synchronous replay never calls imageFor early.
 		teams.subscribe((snapshot) => {
 			for (const visible of this.actions) {
 				this.#render(visible, snapshot);
@@ -58,17 +51,13 @@ abstract class RenderingKeyAction extends SingletonAction {
 	}
 }
 
-/** A meeting key's gating permission, the command it sends, and its image selector. */
 export type KeyConfig = {
 	permission: keyof MeetingPermissions;
 	command: () => void;
 	imageFor: ImageFor;
 };
 
-/**
- * Shared base for Teams meeting keys. Renders live state and, on press, runs the command when
- * actionable, or otherwise asks the helper to recover (a no-op when it is healthy).
- */
+/** Base for Teams meeting keys: on press, runs the command when actionable, else nudges the helper to recover (no-op when healthy). */
 export abstract class MeetingKeyAction extends RenderingKeyAction {
 	readonly #permission: keyof MeetingPermissions;
 	readonly #command: () => void;
@@ -89,7 +78,7 @@ export abstract class MeetingKeyAction extends RenderingKeyAction {
 	}
 }
 
-/** Read-only Teams status tile: renders live state and never sends a Teams command. */
+/** Read-only Teams status tile: renders live state, sends no command. */
 export abstract class StatusAction extends RenderingKeyAction {
 	constructor(spec: StatusSpec) {
 		super((snapshot) => selectStatusImage(spec, snapshot));
@@ -100,11 +89,7 @@ export abstract class StatusAction extends RenderingKeyAction {
 	}
 }
 
-/**
- * Read-only tile rendering a multi-state selector (e.g. presence), where the boolean
- * on/off/unavailable `StatusSpec` does not fit. Like `StatusAction`, a press only nudges the helper
- * to recover.
- */
+/** Read-only tile for a multi-state selector (e.g. presence) that the boolean StatusSpec can't express; a press only nudges recover. */
 export abstract class PresenceKeyAction extends RenderingKeyAction {
 	constructor(imageFor: ImageFor) {
 		super(imageFor);

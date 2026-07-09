@@ -2,15 +2,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-/**
- * The bundled helper executable name. It is dictated by the Rust crate name in `native/Cargo.toml`
- * (`teamdeck-helper` -> `teamdeck-helper.exe`); `tools/build-helper.mjs` copies that artifact next to
- * the plugin, and `tests/helper-path.test.ts` asserts this constant stays in sync with the crate, so
- * the plugin and the build can never disagree on the name.
- *
- * This module deliberately imports only node built-ins (no `@elgato/streamdeck`) so it can be unit
- * tested in isolation.
- */
+/** Bundled helper name, dictated by the Rust crate in `native/Cargo.toml` (helper-path.test.ts asserts they stay in sync). This module imports only node built-ins so it can be unit tested in isolation. */
 export const HELPER_BINARY = "teamdeck-helper.exe";
 
 function pluginRelative(rel: string): string | undefined {
@@ -31,7 +23,7 @@ export function helperCandidates(): Array<string | undefined> {
 	];
 }
 
-/** Resolves the helper binary: env override, then the bundled `bin/`, then a dev cargo build. */
+/** Resolves the helper binary: the first candidate that exists, or undefined. */
 export function helperPath(): string | undefined {
 	return helperCandidates().find((p): p is string => Boolean(p) && existsSync(p as string));
 }

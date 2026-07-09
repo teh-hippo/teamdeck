@@ -32,8 +32,7 @@ fn main() {
         return;
     }
 
-    // Read mode (used by the CI and release smoke tests): emit one snapshot and exit. Presence is
-    // opt-in and never read in one-shot mode, so it reports disabled.
+    // Read mode (used by the CI and release smoke tests): emit one snapshot and exit. Presence is opt-in and never read in one-shot mode, so it reports disabled.
     let snap = build_snapshot(
         &automation,
         &mut MeetingCache::new(),

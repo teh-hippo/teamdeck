@@ -1,37 +1,30 @@
 import type { MeetingPermissions, MeetingState, ReactionType, TeamsSnapshot } from "../teams/types";
 
-/** Key images for a toggle, by logical state. */
 type ToggleImages = { whenTrue: string; whenFalse: string; disabled: string };
 
-/** The side-effect-free visual specification of a live-state Teams toggle. */
 export type ToggleSpec = {
 	permission: keyof MeetingPermissions;
 	stateField: keyof MeetingState;
 	images: ToggleImages;
 };
 
-/**
- * Whether a key gated by the given permission can act, from a snapshot. Kept here so this module
- * stays dependency-free and node-testable; it is the single source of truth for actionability.
- */
+/** Whether a permission-gated key can act; the single source of truth for actionability (dependency-free, node-testable). */
 export function isActionable(snapshot: TeamsSnapshot, permission: keyof MeetingPermissions): boolean {
 	return snapshot.connected && Boolean(snapshot.state.isInMeeting) && Boolean(snapshot.permissions[permission]);
 }
 
-/** Selects the key image for a toggle given the current snapshot. */
 export function selectImage(spec: ToggleSpec, snapshot: TeamsSnapshot): string {
 	if (!isActionable(snapshot, spec.permission)) {
 		return spec.images.disabled;
 	}
-	// Never render a definite on/off when the state is unknown (e.g. a mute/camera/hand label the
-	// helper could not read). Show the neutral/disabled image rather than a fake "off".
+	// Never render a definite on/off when state is unknown (a mute/camera/hand label the helper could not read): show the disabled image, not a fake "off".
 	if (snapshot.availability && snapshot.availability[spec.stateField] === false) {
 		return spec.images.disabled;
 	}
 	return snapshot.state[spec.stateField] ? spec.images.whenTrue : spec.images.whenFalse;
 }
 
-/** Mute: muted (isMuted) shows the red image, live shows green. */
+/** Mute is inverted: muted (isMuted) shows the "off"/red image. */
 export const MUTE: ToggleSpec = {
 	permission: "canToggleMute",
 	stateField: "isMuted",
@@ -42,7 +35,6 @@ export const MUTE: ToggleSpec = {
 	},
 };
 
-/** Camera: on (isVideoOn) shows green, off shows red. */
 export const CAMERA: ToggleSpec = {
 	permission: "canToggleVideo",
 	stateField: "isVideoOn",
@@ -53,7 +45,6 @@ export const CAMERA: ToggleSpec = {
 	},
 };
 
-/** Raise Hand: raised (isHandRaised) shows the raised image, lowered shows neutral. */
 export const HAND: ToggleSpec = {
 	permission: "canToggleHand",
 	stateField: "isHandRaised",
@@ -64,12 +55,7 @@ export const HAND: ToggleSpec = {
 	},
 };
 
-/**
- * The five Teams reactions: action key → wire type (verified live), the icon-name of the colour key
- * image, and its greyed disabled variant. The disabled path is a plain string literal (not built with
- * `${...}`) so `tools/check-icons.mjs` verifies it: disabled tiles are only ever set at runtime via
- * setImage and never appear in the manifest, unlike the colour images, which the manifest covers.
- */
+/** The five Teams reactions → wire type + icon name. `disabled` is a plain literal (not `${...}`) so check-icons.mjs can verify these setImage-only tiles, which never appear in the manifest. */
 export const REACTIONS = {
 	applause: { type: "applause", image: "applause", disabled: "imgs/actions/react/applause-disabled" },
 	laugh: { type: "laugh", image: "laugh", disabled: "imgs/actions/react/laugh-disabled" },
@@ -78,11 +64,7 @@ export const REACTIONS = {
 	surprised: { type: "wow", image: "wow", disabled: "imgs/actions/react/wow-disabled" },
 } as const satisfies Record<string, { type: ReactionType; image: string; disabled: string }>;
 
-/**
- * Selects a reaction's key image: its colour icon when actionable, otherwise its own greyed icon.
- * Kept here (dependency-free) beside selectImage as the single source of truth, so it is
- * node-testable and every reaction stays distinct rather than collapsing to one shared disabled tile.
- */
+/** A reaction's key image: colour when actionable, else its own greyed tile (distinct per reaction, never a shared disabled icon). */
 export function selectReactionImage(spec: { image: string; disabled: string }, snapshot: TeamsSnapshot): string {
 	return isActionable(snapshot, "canReact") ? `imgs/actions/react/${spec.image}` : spec.disabled;
 }
