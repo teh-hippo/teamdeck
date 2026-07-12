@@ -1,4 +1,11 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>teh-hippo/common-repo-configs//renovate/default.json5"]
+  "extends": ["github>teh-hippo/common-repo-configs//renovate/default.json5"],
+  "packageRules": [
+    {
+      "description": "Temporary: block TypeScript 7 (native compiler). @rollup/plugin-typescript reads the TS compiler enum API (ModuleKind) at load and throws under TS7, so the build cannot run. Remove this rule once the rollup TypeScript plugin and the rest of the toolchain support TypeScript 7. See PR #55.",
+      "matchPackageNames": ["typescript"],
+      "allowedVersions": "<7"
+    }
+  ]
 }
