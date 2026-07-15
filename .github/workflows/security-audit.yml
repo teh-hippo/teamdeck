@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   audit:
-    uses: teh-hippo/common-repo-configs/.github/workflows/security-audit.yml@a09e52c265474981aa190ed3997bdc59e7e7ed56  # v3.0.0
+    uses: teh-hippo/common-repo-configs/.github/workflows/security-audit.yml@0ea3db6a0768a59f7fc8a5dfa3f79d885fd80895  # v3.0.1
     permissions:
       contents: read
       issues: write
