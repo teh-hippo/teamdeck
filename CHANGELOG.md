@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.3](https://github.com/teh-hippo/teamdeck/compare/v0.6.2...v0.6.3) (2026-07-22)
+
+
+### Bug Fixes
+
+* **deps:** update rust crate serde to v1.0.229 ([#67](https://github.com/teh-hippo/teamdeck/issues/67)) ([9fe5670](https://github.com/teh-hippo/teamdeck/commit/9fe5670bca57503698cd9f04cc5e521190cd21a6))
+
 ## [0.6.2](https://github.com/teh-hippo/teamdeck/compare/v0.6.1...v0.6.2) (2026-07-08)
 
 
