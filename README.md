@@ -48,6 +48,13 @@ those activities would require signing in to Microsoft Graph, which this tile de
 
 Download the latest from the [Releases page](https://github.com/teh-hippo/teamdeck/releases) — the Stream Deck app installs it for you. No Node, terminal, or build tools required.
 
+## Support
+
+Use [GitHub issues](https://github.com/teh-hippo/teamdeck/issues) to report reproducible defects or ask usage questions.  Search existing issues before opening one.
+
+Support is limited to the Windows, Microsoft Teams, and Elgato Stream Deck environment described in this README.  Requests for other hardware, operating systems, or
+applications may be considered as enhancements but are not supported defects.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
