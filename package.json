@@ -27,7 +27,7 @@
 		"prepare": "node tools/install-hooks.mjs"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.5.9",
+		"@biomejs/biome": "2.5.10",
 		"@elgato/cli": "1.9.0",
 		"@rollup/plugin-commonjs": "29.0.3",
 		"@rollup/plugin-json": "6.1.0",
