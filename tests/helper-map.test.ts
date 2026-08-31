@@ -9,15 +9,18 @@ function sig(value: boolean | null, available = true, source = "uia-label"): Hel
 
 function helperSnap(overrides: Partial<HelperSnapshot> = {}): HelperSnapshot {
 	return {
+		type: "snapshot",
+		schema: 2,
+		ts: 1,
 		teamsRunning: true,
 		inMeeting: true,
-		window: { pid: 1, name: "Meeting with X | Microsoft Teams" },
 		signals: {
 			mute: sig(false),
 			camera: sig(true),
 			hand: sig(false),
 			sharing: sig(false, true, "uia-window"),
 		},
+		controls: { leave: true, react: true },
 		...overrides,
 	};
 }
@@ -41,7 +44,7 @@ test("muted maps to isMuted true; sharing maps to isSharing", () => {
 	assert.equal(s.state.isSharing, true);
 });
 
-test("synthesizes permissions from availability and meeting (B1)", () => {
+test("synthesizes permissions from observed state and controls", () => {
 	const s = mapHelperSnapshot(helperSnap());
 	assert.equal(s.permissions.canToggleMute, true);
 	assert.equal(s.permissions.canToggleVideo, true);
@@ -52,14 +55,16 @@ test("synthesizes permissions from availability and meeting (B1)", () => {
 
 test("unknown signals are undefined and marked unavailable (B2 - never fake state)", () => {
 	const s = mapHelperSnapshot(
-		helperSnap({ signals: { ...helperSnap().signals, hand: sig(null, false, "uia-label?:Handzeichen") } }),
+		helperSnap({
+			signals: { ...helperSnap().signals, hand: sig(null, true, "uia-state-unresolved:toggle=0,aria=1,label=1") },
+		}),
 	);
 	assert.equal(s.state.isHandRaised, undefined, "an unreadable hand label renders unknown");
 	assert.equal(s.availability?.isHandRaised, false);
-	assert.equal(s.permissions.canToggleHand, false, "an unreadable hand greys and disables the key");
+	assert.equal(s.permissions.canToggleHand, true, "control presence remains distinct from state readability");
 	assert.ok(
-		s.labelIssues?.some((i) => i.includes("hand") && i.includes("Handzeichen")),
-		"an unrecognised hand label surfaces as a labelIssue",
+		s.compatibilityIssues?.some((issue) => issue.includes("hand")),
+		"an unresolved hand state surfaces as a compatibility issue",
 	);
 	assert.equal(s.availability?.isMuted, true, "mute is readable");
 	assert.equal(s.availability?.isInMeeting, true);
@@ -97,26 +102,37 @@ test("an available-but-null signal is unknown, never a fake off state", () => {
 	assert.equal(s.availability?.isMuted, false, "available-but-null must render unknown, not off");
 });
 
-test("an unrecognised control label surfaces as a labelIssue diagnostic", () => {
+test("an unresolved control state surfaces as a compatibility diagnostic", () => {
 	const s = mapHelperSnapshot(
-		helperSnap({ signals: { ...helperSnap().signals, mute: sig(null, false, "uia-label?:Stumm") } }),
+		helperSnap({
+			signals: { ...helperSnap().signals, mute: sig(null, true, "uia-state-unresolved:toggle=0,aria=0,label=1") },
+		}),
 	);
 	assert.equal(s.state.isMuted, undefined, "an unreadable label renders unknown, never a fake state");
 	assert.ok(
-		s.labelIssues?.some((i) => i.includes("mute") && i.includes("Stumm")),
-		"the offending control and its raw label are reported",
+		s.compatibilityIssues?.some((issue) => issue.includes("mute")),
+		"the unresolved control is reported",
 	);
 });
 
-test("all-recognised labels produce no labelIssues", () => {
-	assert.equal(mapHelperSnapshot(helperSnap()).labelIssues, undefined);
+test("leave and reactions require their observed controls", () => {
+	const s = mapHelperSnapshot(helperSnap({ controls: { leave: false, react: false } }));
+	assert.equal(s.permissions.canLeave, false);
+	assert.equal(s.permissions.canReact, false);
+});
+
+test("rejects an unsupported helper schema", () => {
+	assert.throws(() => mapHelperSnapshot(helperSnap({ schema: 1 })), /unsupported helper snapshot schema/);
+});
+
+test("resolved states produce no compatibility issues", () => {
+	assert.equal(mapHelperSnapshot(helperSnap()).compatibilityIssues, undefined);
 });
 
 test("maps presence from the helper field", () => {
-	const s = mapHelperSnapshot(helperSnap({ presence: { value: "doNotDisturb", known: true, source: "teams-log" } }));
+	const s = mapHelperSnapshot(helperSnap({ presence: { value: "doNotDisturb", known: true } }));
 	assert.equal(s.presence?.value, "doNotDisturb");
 	assert.equal(s.presence?.known, true);
-	assert.equal(s.presence?.source, "teams-log");
 });
 
 test("an older helper without a presence field still maps mute/camera and reports unknown presence", () => {
@@ -126,16 +142,10 @@ test("an older helper without a presence field still maps mute/camera and report
 	assert.equal(s.state.isVideoOn, true, "camera still maps");
 	assert.equal(s.presence?.value, "unknown");
 	assert.equal(s.presence?.known, false);
-	assert.equal(s.presence?.source, "none");
 });
 
 test("an unrecognised presence token renders unknown and is never surfaced as the raw token", () => {
-	const s = mapHelperSnapshot(helperSnap({ presence: { value: "Presenting", known: true, source: "teams-log" } }));
+	const s = mapHelperSnapshot(helperSnap({ presence: { value: "Presenting", known: true } }));
 	assert.equal(s.presence?.value, "unknown");
 	assert.equal(s.presence?.known, false);
-});
-
-test("the disabled source is preserved so the tile can tell opt-in-off from a live read", () => {
-	const s = mapHelperSnapshot(helperSnap({ presence: { value: "unknown", known: false, source: "disabled" } }));
-	assert.equal(s.presence?.source, "disabled");
 });

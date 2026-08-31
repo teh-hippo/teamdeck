@@ -1,0 +1,13 @@
+[tools]
+node = "24.20.0"
+rust = {
+  version = "1.98.0",
+  profile = "default",
+  components = ["rustfmt", "clippy"],
+  targets = ["x86_64-pc-windows-msvc"],
+  postinstall = "rustup toolchain install 1.98.0-x86_64-pc-windows-msvc --profile default --force-non-host",
+}
+"cargo:cargo-machete" = "0.9.2"
+
+[env]
+TEAMDECK_RUST_TOOLCHAIN = "1.98.0-x86_64-pc-windows-msvc"

@@ -15,6 +15,8 @@ pub(crate) struct NameReg {
     hwnd: isize,
 }
 
+pub(crate) type WindowReg = (UIEventHandler, UIEventHandler, UIElement);
+
 /// Whether `hwnd` still resolves to a live Teams meeting WebView (alive but possibly auto-hidden).
 fn window_alive(automation: &UIAutomation, hwnd: isize) -> bool {
     automation
@@ -29,7 +31,8 @@ fn window_alive(automation: &UIAutomation, hwnd: isize) -> bool {
 pub(crate) fn register_window_handlers(
     automation: &UIAutomation,
     tx: &Sender<Msg>,
-) -> Option<(UIEventHandler, UIEventHandler, UIElement)> {
+    retired: &mut Vec<WindowReg>,
+) -> Option<WindowReg> {
     let root = automation.get_root_element().ok()?;
     let req = top_cache_request(automation).ok()?;
     let opened: UIEventHandler = (Box::new({
@@ -66,7 +69,7 @@ pub(crate) fn register_window_handlers(
             &opened,
         )
         .ok()?;
-    automation
+    if automation
         .add_automation_event_handler(
             UIEventType::Window_WindowClosed,
             &root,
@@ -74,11 +77,35 @@ pub(crate) fn register_window_handlers(
             Some(&req),
             &closed,
         )
-        .ok()?;
+        .is_err()
+    {
+        let _ = automation.remove_automation_event_handler(
+            UIEventType::Window_WindowOpened,
+            &root,
+            &opened,
+        );
+        retired.push((opened, closed, root));
+        return None;
+    }
     Some((opened, closed, root))
 }
 
-/// Subtree PropertyChanged(Name) handler on the meeting window; prefetches AutomationId so it filters to mic/video/raise-hand with no per-event UIA read. Only pings.
+pub(crate) fn reconcile_window_handlers(
+    automation: &UIAutomation,
+    registration: &mut Option<WindowReg>,
+    retired: &mut Vec<WindowReg>,
+    attempts: &mut u8,
+    tx: &Sender<Msg>,
+) -> bool {
+    if registration.is_some() || *attempts >= 3 {
+        return false;
+    }
+    *attempts += 1;
+    *registration = register_window_handlers(automation, tx, retired);
+    registration.is_none() && *attempts == 3
+}
+
+/// Subtree state-change handler on the meeting window.
 fn register_name_handler(
     automation: &UIAutomation,
     hwnd: isize,
@@ -104,7 +131,13 @@ fn register_name_handler(
             TreeScope::Subtree,
             Some(&req),
             &handler,
-            &[UIProperty::Name],
+            &[
+                UIProperty::Name,
+                UIProperty::FullDescription,
+                UIProperty::AriaProperties,
+                UIProperty::ToggleToggleState,
+                UIProperty::LegacyIAccessibleState,
+            ],
         )
         .ok()?;
     Some(NameReg {
@@ -118,6 +151,7 @@ fn register_name_handler(
 pub(crate) fn reconcile_name_handler(
     automation: &UIAutomation,
     name_reg: &mut Option<NameReg>,
+    retired: &mut Vec<NameReg>,
     hwnd: Option<isize>,
     in_meeting: bool,
     tx: &Sender<Msg>,
@@ -130,12 +164,15 @@ pub(crate) fn reconcile_name_handler(
             .map(|r| r.hwnd)
             .filter(|&h| window_alive(automation, h))
     };
-    // Short-circuit on HWND identity; the rare HWND-reuse and cache-None edges self-heal on a later tick.
-    if name_reg.as_ref().map(|r| r.hwnd) == desired {
+    if name_reg.as_ref().map(|registration| registration.hwnd) == desired {
         return;
     }
     if let Some(reg) = name_reg.take() {
         let _ = automation.remove_property_changed_event_handler(&reg.window, &reg.handler);
+        retired.push(reg);
+        if retired.len() > 8 {
+            retired.remove(0);
+        }
     }
     if let Some(h) = desired {
         *name_reg = register_name_handler(automation, h, tx.clone());

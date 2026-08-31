@@ -10,13 +10,13 @@ function snap(over: Partial<TeamsSnapshot> = {}): TeamsSnapshot {
 		state: {},
 		permissions: {},
 		logReadingAllowed: true,
-		presence: { value: "available", known: true, source: "teams-log" },
+		presence: { value: "available", known: true },
 		...over,
 	};
 }
 
 test("opt-in off renders opt-in required regardless of a known presence", () => {
-	const s = snap({ logReadingAllowed: false, presence: { value: "busy", known: true, source: "teams-log" } });
+	const s = snap({ logReadingAllowed: false, presence: { value: "busy", known: true } });
 	assert.ok(selectPresenceImage(s).endsWith("/optin"));
 });
 
@@ -34,7 +34,7 @@ test("each known presence maps to its own tile", () => {
 	];
 	for (const [value, suffix] of cases) {
 		assert.ok(
-			selectPresenceImage(snap({ presence: { value, known: true, source: "teams-log" } })).endsWith(suffix),
+			selectPresenceImage(snap({ presence: { value, known: true } })).endsWith(suffix),
 			`${value} -> ${suffix}`,
 		);
 	}
@@ -43,7 +43,7 @@ test("each known presence maps to its own tile", () => {
 test("do not disturb wins even in a meeting (matches Teams' own precedence)", () => {
 	const s = snap({
 		state: { isInMeeting: true },
-		presence: { value: "doNotDisturb", known: true, source: "teams-log" },
+		presence: { value: "doNotDisturb", known: true },
 	});
 	assert.ok(selectPresenceImage(s).endsWith("/dnd"));
 });
@@ -51,17 +51,17 @@ test("do not disturb wins even in a meeting (matches Teams' own precedence)", ()
 test("in a meeting overrides a non-DND availability", () => {
 	const s = snap({
 		state: { isInMeeting: true },
-		presence: { value: "available", known: true, source: "teams-log" },
+		presence: { value: "available", known: true },
 	});
 	assert.ok(selectPresenceImage(s).endsWith("/inmeeting"));
 });
 
 test("teams not running renders unknown", () => {
-	const s = snap({ connected: false, presence: { value: "unknown", known: false, source: "teams-log" } });
+	const s = snap({ connected: false, presence: { value: "unknown", known: false } });
 	assert.ok(selectPresenceImage(s).endsWith("/unknown"));
 });
 
 test("opted in but presence not yet seeded renders unknown, never a fake state", () => {
-	const s = snap({ presence: { value: "unknown", known: false, source: "teams-log" } });
+	const s = snap({ presence: { value: "unknown", known: false } });
 	assert.ok(selectPresenceImage(s).endsWith("/unknown"));
 });

@@ -17,7 +17,6 @@ use snapshot::PresenceState;
 use uiautomation::UIAutomation;
 
 fn main() {
-    let args: Vec<String> = std::env::args().collect();
     let automation = match UIAutomation::new() {
         Ok(a) => a,
         Err(e) => {
@@ -26,8 +25,7 @@ fn main() {
         }
     };
 
-    // Persistent service mode (used by the plugin):  teamdeck-helper serve
-    if args.get(1).map(|s| s.as_str()) == Some("serve") {
+    if std::env::args().nth(1).as_deref() == Some("serve") {
         serve(&automation);
         return;
     }

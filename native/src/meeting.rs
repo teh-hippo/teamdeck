@@ -1,12 +1,16 @@
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use uiautomation::patterns::{UIExpandCollapsePattern, UILegacyIAccessiblePattern};
 use uiautomation::types::{ExpandCollapseState, Handle, TreeScope, UIProperty};
 use uiautomation::variants::Variant;
 use uiautomation::{UIAutomation, UIElement};
 
-fn has_id(automation: &UIAutomation, parent: &UIElement, aid: &str) -> bool {
-    find_first_id(automation, parent, aid).is_some()
-}
+const CONTROL_IDS: &[&str] = &[
+    "microphone-button",
+    "video-button",
+    "raisehands-button",
+    "hangup-button",
+    "reaction-menu-button",
+];
 
 /// Cache request prefetching ClassName+Name so the top-level walk reads them locally (no per-window round-trip).
 pub(crate) fn top_cache_request(
@@ -22,6 +26,8 @@ pub(crate) fn top_cache_request(
 pub(crate) struct MeetingCache {
     pub(crate) hwnd: Option<isize>,
     elems: Vec<(&'static str, UIElement)>,
+    populated: bool,
+    discovered_at: Option<Instant>,
 }
 
 impl MeetingCache {
@@ -29,6 +35,8 @@ impl MeetingCache {
         MeetingCache {
             hwnd: None,
             elems: Vec::new(),
+            populated: false,
+            discovered_at: None,
         }
     }
 
@@ -37,6 +45,8 @@ impl MeetingCache {
         if self.hwnd != hwnd {
             self.hwnd = hwnd;
             self.elems.clear();
+            self.populated = false;
+            self.discovered_at = None;
         }
     }
 
@@ -51,10 +61,65 @@ impl MeetingCache {
 
     pub(crate) fn drop_elem(&mut self, aid: &str) {
         self.elems.retain(|(a, _)| *a != aid);
+        self.populated = false;
+        self.discovered_at = None;
+    }
+
+    pub(crate) fn clear_controls(&mut self) {
+        self.elems.clear();
+        self.populated = false;
+        self.discovered_at = None;
+    }
+
+    fn should_refresh_missing(&self) -> bool {
+        !self.populated
+            || self
+                .discovered_at
+                .is_none_or(|at| at.elapsed() >= Duration::from_secs(1))
     }
 }
 
-/// The control element for `aid`: a cached element re-validated by a live AutomationId read (dropped + re-found if stale), else found and cached. None if absent.
+fn control_condition(automation: &UIAutomation) -> Option<uiautomation::core::UICondition> {
+    let mut conditions = CONTROL_IDS.iter().filter_map(|aid| {
+        automation
+            .create_property_condition(UIProperty::AutomationId, Variant::from(*aid), None)
+            .ok()
+    });
+    let mut combined = conditions.next()?;
+    for condition in conditions {
+        combined = automation.create_or_condition(combined, condition).ok()?;
+    }
+    Some(combined)
+}
+
+fn discover_controls(automation: &UIAutomation, cache: &mut MeetingCache, meeting: &UIElement) {
+    cache.elems.clear();
+    cache.populated = true;
+    cache.discovered_at = Some(Instant::now());
+    let Some(condition) = control_condition(automation) else {
+        return;
+    };
+    let Ok(request) = automation.create_cache_request() else {
+        return;
+    };
+    if request.add_property(UIProperty::AutomationId).is_err() {
+        return;
+    }
+    let Ok(elements) = meeting.find_all_build_cache(TreeScope::Descendants, &condition, &request)
+    else {
+        return;
+    };
+    for element in elements {
+        let Ok(id) = element.get_cached_automation_id() else {
+            continue;
+        };
+        if let Some(&known_id) = CONTROL_IDS.iter().find(|&&known| known == id) {
+            cache.put(known_id, element);
+        }
+    }
+}
+
+/// Returns a cached control, refreshing the complete control set once when the cache is cold or stale.
 pub(crate) fn cached_elem(
     automation: &UIAutomation,
     cache: &mut MeetingCache,
@@ -67,21 +132,10 @@ pub(crate) fn cached_elem(
         }
         cache.drop_elem(aid);
     }
-    let el = find_first_id(automation, meeting, aid)?;
-    cache.put(aid, el.clone());
-    Some(el)
-}
-
-/// A cached control's UIA Name (for the localised mute/camera labels), re-finding if stale. None if absent.
-pub(crate) fn cached_name(
-    automation: &UIAutomation,
-    cache: &mut MeetingCache,
-    meeting: &UIElement,
-    aid: &'static str,
-) -> Option<String> {
-    cached_elem(automation, cache, meeting, aid)?
-        .get_name()
-        .ok()
+    if cache.should_refresh_missing() {
+        discover_controls(automation, cache, meeting);
+    }
+    cache.get(aid).cloned()
 }
 
 /// Resolves the meeting window, preferring the cached HWND over a scan of the caller's `TeamsWebView` candidates (no second enumeration). Clears the cache when the cached window is gone or not a `TeamsWebView`; a wrong-window bind self-heals via the caller's mic read.
@@ -112,9 +166,31 @@ pub(crate) fn locate_meeting(
 
 /// A top-level TeamsWebView containing both microphone- and hangup-button (an active meeting).
 fn is_meeting_window(automation: &UIAutomation, w: &UIElement) -> bool {
-    w.get_classname().unwrap_or_default() == "TeamsWebView"
-        && has_id(automation, w, "microphone-button")
-        && has_id(automation, w, "hangup-button")
+    if w.get_classname().unwrap_or_default() != "TeamsWebView" {
+        return false;
+    }
+    let Some(condition) = control_condition(automation) else {
+        return false;
+    };
+    let Ok(request) = automation.create_cache_request() else {
+        return false;
+    };
+    if request.add_property(UIProperty::AutomationId).is_err() {
+        return false;
+    }
+    let Ok(elements) = w.find_all_build_cache(TreeScope::Descendants, &condition, &request) else {
+        return false;
+    };
+    let mut microphone = false;
+    let mut hangup = false;
+    for element in elements {
+        match element.get_cached_automation_id().as_deref() {
+            Ok("microphone-button") => microphone = true,
+            Ok("hangup-button") => hangup = true,
+            _ => {}
+        }
+    }
+    microphone && hangup
 }
 
 /// Finds the active meeting window (TeamsWebView containing both microphone- and hangup-button).
@@ -154,17 +230,43 @@ pub(crate) fn actuate(el: &UIElement) -> bool {
     matches!(el.get_pattern::<UILegacyIAccessiblePattern>(), Ok(p) if p.do_default_action().is_ok())
 }
 
-/// Runs a flyout action on a short-lived worker (own `UIAutomation`, no event handlers) so a slow `expand()` can't freeze the snapshot stream. Resolves the meeting from the cached HWND.
-pub(crate) fn run_flyout_worker(hwnd: Option<isize>, aid: &str) -> bool {
-    let Ok(automation) = UIAutomation::new() else {
-        return false;
-    };
-    let meeting = hwnd
+pub(crate) fn locate_control(
+    automation: &UIAutomation,
+    cache: &mut MeetingCache,
+    aid: &'static str,
+) -> Option<UIElement> {
+    if let Some(meeting) = locate_meeting(automation, cache, &[]) {
+        if let Some(element) = cached_elem(automation, cache, &meeting, aid) {
+            return Some(element);
+        }
+    }
+    cache.rebind(None);
+    let candidates = top_teamswebviews(automation);
+    let meeting = locate_meeting(automation, cache, &candidates)?;
+    cached_elem(automation, cache, &meeting, aid)
+}
+
+pub(crate) fn meeting_active(automation: &UIAutomation, cache: &mut MeetingCache) -> bool {
+    locate_control(automation, cache, "microphone-button").is_some()
+}
+
+/// Runs a reaction on the serial action worker and clears its control cache after the flyout rebuild.
+pub(crate) fn run_flyout_action(
+    automation: &UIAutomation,
+    cache: &mut MeetingCache,
+    aid: &str,
+) -> bool {
+    let meeting = cache
+        .hwnd
         .and_then(|h| automation.element_from_handle(Handle::from(h)).ok())
-        .filter(|el| is_meeting_window(&automation, el))
-        .or_else(|| find_meeting_window(&automation));
+        .filter(|el| is_meeting_window(automation, el))
+        .or_else(|| find_meeting_window(automation));
     match meeting {
-        Some(m) => run_flyout(&automation, &m, aid),
+        Some(meeting) => {
+            let ok = run_flyout(automation, &meeting, aid);
+            cache.clear_controls();
+            ok
+        }
         None => false,
     }
 }
@@ -257,5 +359,15 @@ mod tests {
         c.rebind(None);
         assert_eq!(c.hwnd, None);
         assert!(c.get("video-button").is_none());
+    }
+
+    #[test]
+    fn missing_controls_are_refreshed_after_the_negative_cache_expires() {
+        let mut cache = MeetingCache::new();
+        cache.populated = true;
+        cache.discovered_at = Some(Instant::now());
+        assert!(!cache.should_refresh_missing());
+        cache.discovered_at = Instant::now().checked_sub(Duration::from_secs(2));
+        assert!(cache.should_refresh_missing());
     }
 }

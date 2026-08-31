@@ -5,7 +5,6 @@ import { afterEach, mock, test } from "node:test";
 
 import { HelperClient } from "../src/teams/helper.ts";
 
-/** Captures stdin writes and can be told to throw on the next write (simulating EPIPE). */
 class FakeStdin extends EventEmitter {
 	writable = true;
 	readonly writes: string[] = [];
@@ -21,7 +20,6 @@ class FakeStdin extends EventEmitter {
 	}
 }
 
-/** A stand-in for the spawned helper child process: real streams, scriptable lifecycle events. */
 class FakeProc extends EventEmitter {
 	readonly stdout = new PassThrough();
 	readonly stderr = new PassThrough();
@@ -33,9 +31,8 @@ class FakeProc extends EventEmitter {
 		return true;
 	}
 
-	/** Emits one newline-delimited JSON line on stdout, as the real helper would. */
-	line(obj: unknown): void {
-		this.stdout.write(`${JSON.stringify(obj)}\n`);
+	line(value: unknown): void {
+		this.stdout.write(`${JSON.stringify(value)}\n`);
 	}
 
 	cleanup(): void {
@@ -44,7 +41,6 @@ class FakeProc extends EventEmitter {
 	}
 }
 
-/** Records log calls; methods return `this` to match the Stream Deck logger surface. */
 class FakeLogger {
 	readonly infos: string[] = [];
 	readonly warns: string[] = [];
@@ -60,7 +56,8 @@ class FakeLogger {
 	}
 }
 
-const registry: FakeProc[] = [];
+const procsToClean: FakeProc[] = [];
+const clientsToStop: HelperClient[] = [];
 
 function makeClient() {
 	const procs: FakeProc[] = [];
@@ -68,178 +65,355 @@ function makeClient() {
 	const spawn = (() => {
 		const proc = new FakeProc();
 		procs.push(proc);
-		registry.push(proc);
+		procsToClean.push(proc);
 		return proc;
 	}) as unknown as typeof import("node:child_process").spawn;
 	const client = new HelperClient({ spawn, helperPath: () => "fake-helper.exe", logger });
+	clientsToStop.push(client);
 	return { client, procs, logger };
 }
 
-function validSnapshot() {
+function validSnapshot(overrides: Record<string, unknown> = {}) {
 	return {
 		type: "snapshot",
+		schema: 2,
+		ts: 1,
 		teamsRunning: true,
 		inMeeting: true,
-		window: { pid: 1, name: "Meeting | Microsoft Teams" },
 		signals: {
 			mute: { value: false, available: true, source: "uia-label" },
 			camera: { value: true, available: true, source: "uia-label" },
 			hand: { value: false, available: true, source: "uia-label" },
 			sharing: { value: false, available: true, source: "uia-window" },
 		},
+		controls: { leave: true, react: true },
+		...overrides,
 	};
 }
 
-/** Lets the readline interface deliver any buffered stdout lines. */
+function result(id: number, cmd: string, over: Record<string, unknown> = {}) {
+	return {
+		type: "result",
+		schema: 2,
+		ts: 2,
+		id,
+		cmd,
+		ok: true,
+		queueMs: 1,
+		actionMs: 2,
+		confirmMs: 3,
+		totalMs: 6,
+		retries: 0,
+		...over,
+	};
+}
+
+function started(id: number, cmd: string, queueMs = 0) {
+	return { type: "started", schema: 2, ts: 2, id, cmd, queueMs };
+}
+
+const heartbeat = { type: "heartbeat", schema: 2, ts: 1 };
 const flush = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
 
 afterEach(() => {
-	mock.timers.reset();
-	for (const proc of registry) {
+	for (const client of clientsToStop.splice(0)) {
+		client.stop();
+	}
+	for (const proc of procsToClean.splice(0)) {
 		proc.cleanup();
 	}
-	registry.length = 0;
+	mock.timers.reset();
 });
 
-test("react sends 'surprised' for wow and passes other reactions through", () => {
+test("a versioned snapshot is parsed and published", async () => {
 	const { client, procs } = makeClient();
 	client.start();
-	client.react("wow");
-	client.react("like");
-	assert.deepEqual(procs[0].stdin.writes, ['{"cmd":"react","arg":"surprised"}\n', '{"cmd":"react","arg":"like"}\n']);
-});
-
-test("a snapshot line is parsed and published to subscribers", async () => {
-	const { client, procs } = makeClient();
-	client.start();
+	procs[0].line(heartbeat);
 	procs[0].line(validSnapshot());
 	await flush();
 	assert.equal(client.snapshot.connected, true);
-	assert.equal(client.snapshot.state.isInMeeting, true);
 	assert.equal(client.snapshot.state.isMuted, false);
+	assert.equal(client.snapshot.permissions.canReact, true);
 });
 
-test("a failed result line is logged and leaves the snapshot unchanged", async () => {
+test("mute sends a desired state and applies the confirmed observation", async () => {
 	const { client, procs, logger } = makeClient();
-	client.start();
-	procs[0].line({ type: "result", ok: false, cmd: "toggle-mute" });
-	await flush();
-	assert.equal(client.snapshot.connected, false);
-	assert.ok(logger.warns.some((m) => m.includes("toggle-mute")));
-});
-
-test("a malformed snapshot line is ignored rather than crashing", async () => {
-	const { client, procs, logger } = makeClient();
-	client.start();
-	procs[0].stdout.write("not json at all\n");
-	procs[0].line({ inMeeting: true }); // valid JSON but no signals: mapping would throw
-	await flush();
-	assert.equal(client.snapshot.connected, false);
-	assert.ok(logger.warns.some((m) => m.toLowerCase().includes("malformed")));
-});
-
-test("a throwing subscriber neither aborts the fan-out nor escapes", async () => {
-	const { client, procs, logger } = makeClient();
-	let secondCalls = 0;
-	client.subscribe(() => {
-		throw new Error("boom");
-	});
-	client.subscribe(() => {
-		secondCalls++;
-	});
 	client.start();
 	procs[0].line(validSnapshot());
 	await flush();
-	assert.ok(secondCalls > 0, "the second listener still received snapshots");
-	assert.ok(logger.warns.some((m) => m.includes("listener threw")));
+
+	const completed = client.toggleMute();
+	assert.deepEqual(JSON.parse(procs[0].stdin.writes[0]), { id: 1, cmd: "set-mute", target: true });
+	procs[0].line(result(1, "set-mute", { target: true, observed: true, stateSource: "uia-toggle" }));
+	await flush();
+
+	assert.equal(await completed, true);
+	assert.equal(client.snapshot.state.isMuted, true);
+	assert.ok(logger.infos.some((message) => message.includes("totalMs=6")));
 });
 
-test("stop kills the helper, is idempotent and prevents any restart", () => {
+test("rapid repeated presses coalesce behind the in-flight desired state", async () => {
+	const { client, procs } = makeClient();
+	client.start();
+	procs[0].line(validSnapshot());
+	await flush();
+
+	const muted = client.toggleMute();
+	const unmuted = client.toggleMute();
+	assert.equal(procs[0].stdin.writes.length, 1, "second press waits for the in-flight target");
+
+	procs[0].line(result(1, "set-mute", { target: true, observed: true }));
+	await flush();
+	assert.deepEqual(JSON.parse(procs[0].stdin.writes[1]), { id: 2, cmd: "set-mute", target: false });
+	procs[0].line(result(2, "set-mute", { target: false, observed: false }));
+	await flush();
+
+	assert.equal(await muted, true);
+	assert.equal(await unmuted, true);
+	assert.equal(client.snapshot.state.isMuted, false);
+});
+
+test("an odd rapid-toggle burst resolves superseded waiters", async () => {
+	const { client, procs } = makeClient();
+	client.start();
+	procs[0].line(validSnapshot());
+	await flush();
+
+	const first = client.toggleMute();
+	const superseded = client.toggleMute();
+	const final = client.toggleMute();
+	procs[0].line(result(1, "set-mute", { target: true, observed: true }));
+	await flush();
+
+	assert.equal(await first, true);
+	assert.equal(await final, true);
+	assert.equal(await superseded, false);
+	assert.equal(procs[0].stdin.writes.length, 1);
+});
+
+test("a failed confirmed command resolves false and preserves the trusted snapshot", async () => {
+	const { client, procs, logger } = makeClient();
+	client.start();
+	procs[0].line(validSnapshot());
+	await flush();
+
+	const completed = client.toggleHand();
+	procs[0].line(
+		result(1, "set-hand", {
+			ok: false,
+			target: true,
+			observed: false,
+			reason: "confirmation-timeout",
+		}),
+	);
+	await flush();
+
+	assert.equal(await completed, false);
+	assert.equal(client.snapshot.state.isHandRaised, false);
+	assert.ok(logger.warns.some((message) => message.includes("confirmation-timeout")));
+});
+
+test("the latest idempotent target is replayed after an EPIPE restart", async () => {
+	const { client, procs } = makeClient();
+	client.start();
+	procs[0].line(validSnapshot());
+	await flush();
+
+	procs[0].stdin.failNext = true;
+	const completed = client.toggleHand();
+	assert.equal(procs.length, 2);
+	assert.equal(procs[0].killed, true);
+
+	procs[1].line(heartbeat);
+	procs[1].line(validSnapshot());
+	await flush();
+	assert.deepEqual(JSON.parse(procs[1].stdin.writes[0]), { id: 2, cmd: "set-hand", target: true });
+	procs[1].line(result(2, "set-hand", { target: true, observed: true }));
+	await flush();
+	assert.equal(await completed, true);
+});
+
+test("all pending idempotent controls reconcile after restart", async () => {
 	mock.timers.enable({ apis: ["setTimeout"] });
 	const { client, procs } = makeClient();
 	client.start();
-	const proc = procs[0];
-	client.stop();
-	assert.equal(proc.killed, true);
-	assert.equal(client.snapshot.connected, false);
-	client.stop(); // second call must be a no-op
-	proc.emit("close", 0); // a late close from the killed process must not schedule a restart
-	mock.timers.tick(60_000);
-	assert.equal(procs.length, 1, "no respawn after stop()");
+	procs[0].line(validSnapshot());
+	await flush();
+
+	const mute = client.toggleMute();
+	const camera = client.toggleVideo();
+	procs[0].emit("close", 1);
+	mock.timers.tick(1_000);
+	procs[1].line(heartbeat);
+	procs[1].line(validSnapshot());
+	await flush();
+
+	assert.deepEqual(
+		procs[1].stdin.writes.map((write) => JSON.parse(write)),
+		[
+			{ id: 3, cmd: "set-mute", target: true },
+			{ id: 4, cmd: "set-camera", target: false },
+		],
+	);
+	procs[1].line(result(3, "set-mute", { target: true, observed: true }));
+	procs[1].line(result(4, "set-camera", { target: false, observed: false }));
+	await flush();
+	assert.equal(await mute, true);
+	assert.equal(await camera, true);
 });
 
-test("sending a command while the helper is down recovers it", () => {
+test("replay waits through a transiently unresolved replacement snapshot", async () => {
 	const { client, procs } = makeClient();
 	client.start();
-	procs[0].emit("close", 1); // process gone; a restart is scheduled but has not fired yet
-	client.toggleMute(); // finds no writable stdin and recovers immediately
-	assert.equal(procs.length, 2, "recover() respawned the helper");
+	procs[0].line(validSnapshot());
+	await flush();
+
+	procs[0].stdin.failNext = true;
+	const completed = client.toggleHand();
+	procs[1].line(heartbeat);
+	procs[1].line(
+		validSnapshot({
+			signals: {
+				...validSnapshot().signals,
+				hand: { value: null, available: true, source: "uia-state-unresolved:toggle=0,aria=0,description=0,label=1" },
+			},
+		}),
+	);
+	await flush();
+	assert.equal(procs[1].stdin.writes.length, 0);
+
+	procs[1].line(validSnapshot());
+	await flush();
+	assert.deepEqual(JSON.parse(procs[1].stdin.writes[0]), { id: 2, cmd: "set-hand", target: true });
+	procs[1].line(result(2, "set-hand", { target: true, observed: true }));
+	await flush();
+	assert.equal(await completed, true);
 });
 
-test("buffered lines from a replaced process are ignored", async () => {
+test("leave is never replayed after a broken pipe", async () => {
+	const { client, procs } = makeClient();
+	client.start();
+	procs[0].line(validSnapshot());
+	await flush();
+
+	procs[0].stdin.failNext = true;
+	assert.equal(await client.leave(), false);
+	assert.equal(procs.length, 2);
+	procs[1].line(heartbeat);
+	procs[1].line(validSnapshot());
+	await flush();
+	assert.equal(procs[1].stdin.writes.length, 0);
+});
+
+test("buffered output from a replaced process is ignored", async () => {
 	mock.timers.enable({ apis: ["setTimeout"] });
 	const { client, procs } = makeClient();
 	client.start();
 	const old = procs[0];
 	old.emit("close", 1);
-	mock.timers.tick(1_000); // restart fires -> procs[1]
-	assert.equal(procs.length, 2);
-	old.line(validSnapshot()); // a late line from the replaced process
-	await flush();
-	assert.equal(client.snapshot.connected, false, "the stale line was ignored");
-});
-
-test("restart backoff grows on a crash loop and resets after a healthy snapshot", async () => {
-	mock.timers.enable({ apis: ["setTimeout"] });
-	const { client, procs } = makeClient();
-	client.start();
-
-	procs[0].emit("close", 1); // schedules a restart at 1s
-	mock.timers.tick(999);
-	assert.equal(procs.length, 1, "no respawn before 1s");
-	mock.timers.tick(1);
-	assert.equal(procs.length, 2, "respawn at 1s");
-
-	procs[1].emit("close", 1); // still no healthy snapshot: backoff has grown to 2s
-	mock.timers.tick(1999);
-	assert.equal(procs.length, 2, "backoff grew beyond 1s");
-	mock.timers.tick(1);
-	assert.equal(procs.length, 3, "respawn at 2s");
-
-	procs[2].line(validSnapshot()); // proves health -> backoff resets to 1s
-	await flush();
-	assert.equal(client.snapshot.connected, true);
-
-	procs[2].emit("close", 1);
 	mock.timers.tick(1_000);
-	assert.equal(procs.length, 4, "backoff reset to 1s after a healthy snapshot");
+	assert.equal(procs.length, 2);
+	old.line(validSnapshot());
+	await flush();
+	assert.equal(client.snapshot.connected, false);
 });
 
-test("a write EPIPE during the death race respawns immediately instead of deferring to the backoff", () => {
+test("schema mismatch replaces the helper instead of accepting stale data", async () => {
 	mock.timers.enable({ apis: ["setTimeout"] });
+	const { client, procs, logger } = makeClient();
+	client.start();
+	procs[0].line(validSnapshot({ schema: 1 }));
+	await flush();
+	assert.equal(procs.length, 1, "persistent incompatibility uses crash-loop backoff");
+	mock.timers.tick(1_000);
+	assert.equal(procs.length, 2);
+	assert.equal(client.snapshot.connected, false);
+	assert.ok(logger.warns.some((message) => message.includes("schema mismatch")));
+});
+
+test("a live process with no heartbeats is replaced", () => {
+	mock.timers.enable({ apis: ["Date", "setInterval", "setTimeout"], now: 1_000 });
+	const { client, procs, logger } = makeClient();
+	client.start();
+	mock.timers.tick(3_000);
+	assert.equal(procs.length, 2);
+	assert.equal(procs[0].killed, true);
+	assert.ok(logger.warns.some((message) => message.includes("heartbeat timed out")));
+});
+
+test("a timed-out toggle is replayed after the replacement becomes healthy", async () => {
+	mock.timers.enable({ apis: ["Date", "setInterval", "setTimeout"], now: 1_000 });
 	const { client, procs } = makeClient();
 	client.start();
-	// stdin broke but 'close' hasn't landed: #proc is still set and the next write throws EPIPE.
+	procs[0].line(validSnapshot());
+	await flush();
+
+	const completed = client.toggleMute();
+	procs[0].line(started(1, "set-mute"));
+	await flush();
+	mock.timers.tick(2_000);
+	assert.equal(procs.length, 2);
+	procs[1].line(heartbeat);
+	procs[1].line(validSnapshot());
+	await flush();
+	assert.deepEqual(JSON.parse(procs[1].stdin.writes[0]), { id: 2, cmd: "set-mute", target: true });
+	procs[1].line(result(2, "set-mute", { target: true, observed: true }));
+	await flush();
+	assert.equal(await completed, true);
+});
+
+test("queued commands have no deadline until native execution starts", async () => {
+	mock.timers.enable({ apis: ["Date", "setTimeout"], now: 1_000 });
+	const { client, procs } = makeClient();
+	client.start();
+	procs[0].line(validSnapshot());
+	await flush();
+
+	const completed = client.react("like");
+	mock.timers.tick(10_000);
+	assert.equal(procs.length, 1);
+	procs[0].line(started(1, "react", 10_000));
+	procs[0].line(result(1, "react", { queueMs: 10_000 }));
+	await flush();
+	assert.equal(await completed, true);
+});
+
+test("a replay fails within a bounded time when no replacement snapshot arrives", async () => {
+	mock.timers.enable({ apis: ["setTimeout"] });
+	const { client, procs, logger } = makeClient();
+	client.start();
+	procs[0].line(validSnapshot());
+	await flush();
+
 	procs[0].stdin.failNext = true;
-	client.toggleMute();
-	assert.equal(procs.length, 2, "EPIPE on write must tear the dead child down and respawn now");
-	procs[0].emit("close", 1); // the replaced child's late close + any stale timer must not spawn a third.
-	mock.timers.tick(60_000);
-	assert.equal(procs.length, 2, "no double-spawn from the dead child's close or a stale timer");
+	const completed = client.toggleHand();
+	mock.timers.tick(5_000);
+	assert.equal(await completed, false);
+	assert.ok(logger.warns.some((message) => message.includes("replay") && message.includes("timed out")));
 });
 
-test("an unwritable stdin during the death race respawns immediately", () => {
-	const { client, procs } = makeClient();
+test("an unresolved state blocks a state command", async () => {
+	const { client, procs, logger } = makeClient();
 	client.start();
-	procs[0].stdin.writable = false; // pipe gone; the process 'close' has not been processed yet.
-	client.toggleMute();
-	assert.equal(procs.length, 2, "an unwritable stdin must respawn immediately, not wait for the backoff");
+	procs[0].line(
+		validSnapshot({
+			signals: {
+				...validSnapshot().signals,
+				hand: { value: null, available: true, source: "uia-state-unresolved:toggle=0,aria=1,label=1" },
+			},
+		}),
+	);
+	await flush();
+	assert.equal(await client.toggleHand(), false);
+	assert.equal(procs[0].stdin.writes.length, 0);
+	assert.ok(logger.warns.some((message) => message.includes("state is unavailable")));
 });
 
-test("after stop(), a stray command never respawns the helper", () => {
-	const { client, procs } = makeClient();
+test("malformed output is ignored without changing the snapshot", async () => {
+	const { client, procs, logger } = makeClient();
 	client.start();
-	client.stop();
-	client.toggleMute(); // stdin is gone, but the client is stopped: it must stay down.
-	assert.equal(procs.length, 1, "stop() must keep the helper down even if a command races in");
+	procs[0].stdout.write("not json\n");
+	await flush();
+	assert.equal(client.snapshot.connected, false);
+	assert.ok(logger.warns.some((message) => message.includes("malformed")));
 });

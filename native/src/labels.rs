@@ -1,4 +1,7 @@
-use crate::snapshot::{known, Signal};
+use crate::snapshot::Signal;
+use uiautomation::patterns::{UILegacyIAccessiblePattern, UITogglePattern};
+use uiautomation::types::{ToggleState, UIProperty};
+use uiautomation::UIElement;
 use windows::core::w;
 use windows::Win32::Foundation::ERROR_SUCCESS;
 use windows::Win32::System::Registry::{RegGetValueW, HKEY_CURRENT_USER, RRF_RT_REG_QWORD};
@@ -74,14 +77,78 @@ pub(crate) fn teams_webcam_in_use() -> Option<bool> {
     (status == ERROR_SUCCESS).then_some(value == 0)
 }
 
-/// Maps a control's localised Name to a Signal; an unrecognised label is tagged `uia-label?:<name>` for diagnostics.
-pub(crate) fn label_signal(name: &str, labels: &[StateLabel]) -> Signal {
-    match match_label(name, labels) {
-        Some(v) => known(v, "uia-label"),
+fn aria_boolean(properties: &str) -> Option<bool> {
+    properties.split(';').find_map(|part| {
+        let (name, value) = part.split_once('=')?;
+        if !matches!(name.trim(), "pressed" | "checked" | "selected") {
+            return None;
+        }
+        match value.trim() {
+            "true" => Some(true),
+            "false" => Some(false),
+            _ => None,
+        }
+    })
+}
+
+pub(crate) fn is_actuable(element: &UIElement) -> bool {
+    element.is_enabled().unwrap_or(false)
+        && element.get_pattern::<UILegacyIAccessiblePattern>().is_ok()
+}
+
+/// Reads a control's state from language-independent UIA state first, then its action label.
+pub(crate) fn control_signal(element: &UIElement, labels: &[StateLabel]) -> Signal {
+    let available = is_actuable(element);
+    let toggle = element.get_pattern::<UITogglePattern>().ok();
+    let aria = element
+        .get_property_value(UIProperty::AriaProperties)
+        .ok()
+        .and_then(|value| value.get_string().ok());
+    let description = element
+        .get_property_value(UIProperty::FullDescription)
+        .ok()
+        .and_then(|value| value.get_string().ok());
+    let label = element.get_name().ok();
+    let state = toggle
+        .as_ref()
+        .and_then(|pattern| match pattern.get_toggle_state().ok()? {
+            ToggleState::On => Some((true, "uia-toggle")),
+            ToggleState::Off => Some((false, "uia-toggle")),
+            ToggleState::Indeterminate => None,
+        })
+        .or_else(|| {
+            aria.as_deref()
+                .and_then(aria_boolean)
+                .map(|value| (value, "uia-aria"))
+        })
+        .or_else(|| {
+            description
+                .as_deref()
+                .and_then(|value| match_label(value, labels))
+                .map(|value| (value, "uia-full-description"))
+        })
+        .or_else(|| {
+            label
+                .as_deref()
+                .and_then(|name| match_label(name, labels))
+                .map(|value| (value, "uia-label"))
+        });
+    match state {
+        Some((value, source)) => Signal {
+            value: Some(value),
+            available,
+            source: source.into(),
+        },
         None => Signal {
             value: None,
-            available: false,
-            source: format!("uia-label?:{name}"),
+            available,
+            source: format!(
+                "uia-state-unresolved:toggle={},aria={},description={},label={}",
+                u8::from(toggle.is_some()),
+                u8::from(aria.as_ref().is_some_and(|value| !value.is_empty())),
+                u8::from(description.as_ref().is_some_and(|value| !value.is_empty())),
+                u8::from(label.as_ref().is_some_and(|value| !value.is_empty()))
+            ),
         },
     }
 }
@@ -148,5 +215,13 @@ mod tests {
             Some(true)
         );
         assert_eq!(match_label("Microphone", HAND_LABELS), None);
+    }
+
+    #[test]
+    fn aria_boolean_reads_language_independent_toggle_state() {
+        assert_eq!(aria_boolean("pressed=true;"), Some(true));
+        assert_eq!(aria_boolean("disabled=false;pressed=false;"), Some(false));
+        assert_eq!(aria_boolean("checked=true;"), Some(true));
+        assert_eq!(aria_boolean("label=Raise your hand;"), None);
     }
 }

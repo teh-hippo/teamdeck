@@ -1,6 +1,8 @@
 use serde::Serialize;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+pub(crate) const SCHEMA: u32 = 2;
+
 #[derive(Serialize)]
 pub(crate) struct Signal {
     pub(crate) value: Option<bool>,
@@ -26,6 +28,12 @@ pub(crate) struct Signals {
     pub(crate) sharing: Signal,
 }
 
+#[derive(Serialize)]
+pub(crate) struct Controls {
+    pub(crate) leave: bool,
+    pub(crate) react: bool,
+}
+
 /// Coarse Teams availability, read language-independently from the New Teams log. `Unknown` covers "not read yet", "opt-in off", "Teams not running" and the log's own `PresenceUnknown` token. Activity variants (Presenting/OutOfOffice/...) aren't in the coarse log token.
 #[derive(Serialize, Clone, Copy, PartialEq, Eq, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -39,12 +47,10 @@ pub(crate) enum Presence {
     Unknown,
 }
 
-/// The snapshot's presence field. `source` is a fixed token (`teams-log`/`disabled`; the plugin also accepts `none`), never raw log text, so no log content can reach the wire.
 #[derive(Serialize, Clone)]
 pub(crate) struct PresenceState {
     pub(crate) value: Presence,
     pub(crate) known: bool,
-    source: String,
 }
 
 impl PresenceState {
@@ -53,7 +59,6 @@ impl PresenceState {
         PresenceState {
             value: Presence::Unknown,
             known: false,
-            source: "disabled".into(),
         }
     }
 
@@ -62,7 +67,6 @@ impl PresenceState {
         PresenceState {
             value: Presence::Unknown,
             known: false,
-            source: "teams-log".into(),
         }
     }
 
@@ -71,18 +75,11 @@ impl PresenceState {
         PresenceState {
             value: p,
             known: p != Presence::Unknown,
-            source: "teams-log".into(),
         }
     }
 }
 
-#[derive(Serialize)]
-pub(crate) struct WindowInfo {
-    pub(crate) pid: u32,
-    pub(crate) name: String,
-}
-
-/// Snapshot contract: one JSON line per tick. `teamsRunning`/`inMeeting`/`signals`/`presence` drive the plugin; the rest are diagnostic.
+/// Snapshot contract: one JSON line per tick.
 #[derive(Serialize)]
 pub(crate) struct Snapshot {
     pub(crate) schema: u32,
@@ -91,8 +88,8 @@ pub(crate) struct Snapshot {
     pub(crate) teams_running: bool,
     #[serde(rename = "inMeeting")]
     pub(crate) in_meeting: bool,
-    pub(crate) window: Option<WindowInfo>,
     pub(crate) signals: Signals,
+    pub(crate) controls: Controls,
     pub(crate) presence: PresenceState,
 }
 
@@ -118,16 +115,19 @@ mod tests {
     #[test]
     fn snapshot_serialises_the_wire_contract() {
         let snap = Snapshot {
-            schema: 1,
+            schema: SCHEMA,
             ts: 0,
             teams_running: true,
             in_meeting: true,
-            window: None,
             signals: Signals {
                 mute: known(false, "uia-label"),
                 camera: Signal::unknown(),
                 hand: Signal::unknown(),
                 sharing: known(true, "uia-window"),
+            },
+            controls: Controls {
+                leave: true,
+                react: true,
             },
             presence: PresenceState::from_value(Presence::DoNotDisturb),
         };
@@ -145,24 +145,14 @@ mod tests {
         );
         assert_eq!(v["signals"]["mute"]["value"], serde_json::json!(false));
         assert_eq!(v["signals"]["mute"]["available"], serde_json::json!(true));
-        // Presence is a camelCase enum string plus its known flag and a fixed source token.
         assert_eq!(v["presence"]["value"], serde_json::json!("doNotDisturb"));
         assert_eq!(v["presence"]["known"], serde_json::json!(true));
-        assert_eq!(v["presence"]["source"], serde_json::json!("teams-log"));
     }
 
     #[test]
-    fn presence_state_known_flag_and_sources() {
-        // Unknown is never "known" (renders unavailable); a real value is.
+    fn presence_state_known_flag() {
         assert!(!PresenceState::from_value(Presence::Unknown).known);
         assert!(PresenceState::from_value(Presence::Busy).known);
-        // The three fixed source tokens the plugin distinguishes; never raw log text.
-        assert_eq!(PresenceState::disabled().source, "disabled");
-        assert_eq!(PresenceState::seeking().source, "teams-log");
-        assert_eq!(
-            PresenceState::from_value(Presence::Away).source,
-            "teams-log"
-        );
     }
 
     #[test]

@@ -10,10 +10,16 @@ Build and test on Windows. The plugin is TypeScript bundled by rollup; the nativ
 CLI (`validate`, `link`, `pack`) only talks to the Windows Stream Deck app, and the installed
 `node_modules` native binaries are host-specific.
 
-`npm run proof` is the canonical gate (typecheck, build, validate, icon check, unit tests); run it
-before considering a change complete. It does not build the helper -- run `npm run build:helper`, or
-`npm run pack` which builds and bundles it, when the helper or its bundling changes. The pre-commit
-hook runs a secret scan with Node, so commits need Node on the PATH.
+Use targeted Node test files or Rust test filters while implementing.  `npm run proof` is the
+canonical Windows release-candidate gate: plugin typecheck, lint, build, validation, icon checks and
+tests, followed by Rustfmt, Clippy, native tests, cargo-machete, helper bundling and a schema smoke
+test.  Run it once the release candidate is ready and again after device-driven code changes.  The
+pre-commit hook runs a secret scan with Node, so commits need Node on the PATH.
+
+On-device proof uses at least 30 confirmed commands per control with zero failures, duplicates, or
+final state disagreements.  P95 limits are 500 ms for mute/camera, one second for hand, 1.5 seconds
+for reactions, and two seconds for helper recovery.  Hand commands retry at most twice, at 600 ms
+intervals, only when Teams' `FullDescription` proves the preceding action did not change state.
 
 ## Releases and versioning
 

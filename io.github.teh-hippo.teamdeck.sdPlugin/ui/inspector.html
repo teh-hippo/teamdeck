@@ -22,8 +22,8 @@
 	</head>
 	<body>
 		<div class="hint">
-			Status tiles mirror your meeting without disturbing the active window. Pressing a control
-			key briefly brings Teams forward, then returns focus to where you were.
+			Status tiles mirror your meeting. Control keys use Windows accessibility APIs without
+			changing the active window.
 		</div>
 		<div class="opt" id="optIn" style="display: none">
 			<label>
@@ -43,7 +43,7 @@
 			let globalSettings = {};
 			const AVAILABILITY = "io.github.teh-hippo.teamdeck.availability";
 			const SOURCE_URL =
-				"https://github.com/teh-hippo/teamdeck/blob/main/native/src/main.rs#L407-L425";
+				"https://github.com/teh-hippo/teamdeck/blob/main/native/src/presence.rs#L98-L125";
 
 			function connectElgatoStreamDeckSocket(port, uuid, registerEvent, info, actionInfo) {
 				piUuid = uuid;

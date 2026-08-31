@@ -19,28 +19,11 @@ if (!crate) {
 }
 const exeName = crate + (process.platform === "win32" ? ".exe" : "");
 
-function resolveCargo() {
-	// Prefer cargo on PATH (CI runners); fall back to the default rustup install location, since on
-	// local Windows dev cargo is often absent from a non-interactive PATH.
-	const candidates = ["cargo"];
-	const home = process.env.USERPROFILE || process.env.HOME;
-	if (home) {
-		candidates.push(join(home, ".cargo", "bin", process.platform === "win32" ? "cargo.exe" : "cargo"));
-	}
-	for (const candidate of candidates) {
-		try {
-			execFileSync(candidate, ["--version"], { stdio: "ignore" });
-			return candidate;
-		} catch {
-			// try the next candidate
-		}
-	}
-	throw new Error("cargo not found. Install Rust (https://rustup.rs) to build the native helper.");
-}
-
-const cargo = resolveCargo();
-console.log(`Building native helper with ${cargo} ...`);
-execFileSync(cargo, ["build", "--release"], { cwd: nativeDir, stdio: "inherit" });
+console.log("Building native helper...");
+execFileSync(process.execPath, [join(root, "tools", "run-cargo.mjs"), "build", "--release"], {
+	cwd: nativeDir,
+	stdio: "inherit",
+});
 
 const built = join(nativeDir, "target", "release", exeName);
 if (!existsSync(built)) {
