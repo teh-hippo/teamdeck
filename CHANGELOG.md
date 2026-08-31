@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.7](https://github.com/teh-hippo/teamdeck/compare/v0.6.6...v0.6.7) (2026-08-31)
+
+
+### Bug Fixes
+
+* improve Teams control reliability ([4b9da88](https://github.com/teh-hippo/teamdeck/commit/4b9da88e0e33b4d92ff3f4acfbdebdde328bc42f))
+
 ## [0.6.6](https://github.com/teh-hippo/teamdeck/compare/v0.6.5...v0.6.6) (2026-08-30)
 
 
