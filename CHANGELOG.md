@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.10](https://github.com/teh-hippo/teamdeck/compare/v0.6.9...v0.6.10) (2026-09-03)
+
+
+### Bug Fixes
+
+* **deps:** update teh-hippo/common-repo-configs action to v3.2.9 ([#125](https://github.com/teh-hippo/teamdeck/issues/125)) ([3358f52](https://github.com/teh-hippo/teamdeck/commit/3358f52360674727a13f7cd449318cdbe6010508))
+
 ## [0.6.9](https://github.com/teh-hippo/teamdeck/compare/v0.6.8...v0.6.9) (2026-09-01)
 
 
