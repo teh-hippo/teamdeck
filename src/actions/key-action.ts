@@ -1,17 +1,16 @@
 import streamDeck, {
-	type Action,
 	type KeyDownEvent,
 	SingletonAction,
 	type WillAppearEvent,
 	type WillDisappearEvent,
 } from "@elgato/streamdeck";
-import type { JsonObject } from "@elgato/utils";
 
 import { teams } from "../teams/client";
 import type { MeetingPermissions, TeamsSnapshot } from "../teams/types";
 import { isActionable } from "./toggle";
 
 type ImageFor = (snapshot: TeamsSnapshot) => string;
+type ActionTarget = WillAppearEvent["action"];
 
 /** Base for Teams keys that render live state: subscribes and re-renders every visible instance via setImage (memoised); subclasses supply the selector. */
 abstract class RenderingKeyAction extends SingletonAction {
@@ -37,7 +36,7 @@ abstract class RenderingKeyAction extends SingletonAction {
 		this.#images.delete(ev.action.id);
 	}
 
-	#render(target: Action<JsonObject>, snapshot: TeamsSnapshot): void {
+	#render(target: ActionTarget, snapshot: TeamsSnapshot): void {
 		if (!target.isKey()) {
 			return;
 		}
@@ -54,7 +53,7 @@ abstract class RenderingKeyAction extends SingletonAction {
 	}
 
 	async #applyImages(
-		target: Action<JsonObject>,
+		target: ActionTarget,
 		state: { desired: string; applied?: string; running: boolean },
 	): Promise<void> {
 		let failed = false;
