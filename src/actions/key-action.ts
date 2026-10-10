@@ -1,11 +1,11 @@
 import streamDeck, {
-	type DialAction,
-	type KeyAction,
+	type Action,
 	type KeyDownEvent,
 	SingletonAction,
 	type WillAppearEvent,
 	type WillDisappearEvent,
 } from "@elgato/streamdeck";
+import type { JsonObject } from "@elgato/utils";
 
 import { teams } from "../teams/client";
 import type { MeetingPermissions, TeamsSnapshot } from "../teams/types";
@@ -37,7 +37,7 @@ abstract class RenderingKeyAction extends SingletonAction {
 		this.#images.delete(ev.action.id);
 	}
 
-	#render(target: DialAction | KeyAction, snapshot: TeamsSnapshot): void {
+	#render(target: Action<JsonObject>, snapshot: TeamsSnapshot): void {
 		if (!target.isKey()) {
 			return;
 		}
@@ -53,10 +53,13 @@ abstract class RenderingKeyAction extends SingletonAction {
 		void this.#applyImages(target, state);
 	}
 
-	async #applyImages(target: KeyAction, state: { desired: string; applied?: string; running: boolean }): Promise<void> {
+	async #applyImages(
+		target: Action<JsonObject>,
+		state: { desired: string; applied?: string; running: boolean },
+	): Promise<void> {
 		let failed = false;
 		try {
-			while (this.#images.get(target.id) === state && state.applied !== state.desired) {
+			while (target.isKey() && this.#images.get(target.id) === state && state.applied !== state.desired) {
 				const image = state.desired;
 				await target.setImage(image);
 				state.applied = image;
