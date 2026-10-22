@@ -13,6 +13,6 @@ concurrency:
 
 jobs:
   release-please:
-    uses: teh-hippo/common-repo-configs/.github/workflows/release-please.yml@1c2112932cff19f1a1a5adfa788d9d833d9729af  # v3.2.37
+    uses: teh-hippo/common-repo-configs/.github/workflows/release-please.yml@2485d1fee6af1e1282dddc0ad7bf78e6efb92e43  # v3.3.1
     secrets:
       RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
