@@ -1,5 +1,5 @@
 [tools]
-node = "24.22.1"
+node = "24.22.2"
 rust = {
   version = "1.98.1",
   profile = "default",
