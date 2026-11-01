@@ -33,7 +33,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.6.4",
-		"@elgato/cli": "1.10.3",
+		"@elgato/cli": "1.10.4",
 		"@rollup/plugin-commonjs": "29.0.3",
 		"@rollup/plugin-json": "6.1.0",
 		"@rollup/plugin-node-resolve": "16.0.3",
