@@ -1,6 +1,4 @@
 import streamDeck, {
-	type DialAction,
-	type KeyAction,
 	type KeyDownEvent,
 	SingletonAction,
 	type WillAppearEvent,
@@ -12,6 +10,7 @@ import type { MeetingPermissions, TeamsSnapshot } from "../teams/types";
 import { isActionable } from "./toggle";
 
 type ImageFor = (snapshot: TeamsSnapshot) => string;
+type ActionTarget = WillAppearEvent["action"];
 
 /** Base for Teams keys that render live state: subscribes and re-renders every visible instance via setImage (memoised); subclasses supply the selector. */
 abstract class RenderingKeyAction extends SingletonAction {
@@ -37,7 +36,7 @@ abstract class RenderingKeyAction extends SingletonAction {
 		this.#images.delete(ev.action.id);
 	}
 
-	#render(target: DialAction | KeyAction, snapshot: TeamsSnapshot): void {
+	#render(target: ActionTarget, snapshot: TeamsSnapshot): void {
 		if (!target.isKey()) {
 			return;
 		}
@@ -53,10 +52,13 @@ abstract class RenderingKeyAction extends SingletonAction {
 		void this.#applyImages(target, state);
 	}
 
-	async #applyImages(target: KeyAction, state: { desired: string; applied?: string; running: boolean }): Promise<void> {
+	async #applyImages(
+		target: ActionTarget,
+		state: { desired: string; applied?: string; running: boolean },
+	): Promise<void> {
 		let failed = false;
 		try {
-			while (this.#images.get(target.id) === state && state.applied !== state.desired) {
+			while (target.isKey() && this.#images.get(target.id) === state && state.applied !== state.desired) {
 				const image = state.desired;
 				await target.setImage(image);
 				state.applied = image;
