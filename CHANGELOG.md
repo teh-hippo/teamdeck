@@ -1,5 +1,145 @@
 # Changelog
 
+## [0.6.50](https://github.com/teh-hippo/teamdeck/compare/v0.6.49...v0.6.50) (2026-11-12)
+
+
+### Bug Fixes
+
+* **deps:** update teh-hippo/common-repo-configs action to v3.5.12 ([#311](https://github.com/teh-hippo/teamdeck/issues/311)) ([ed10b7a](https://github.com/teh-hippo/teamdeck/commit/ed10b7ae20fe324b3ce5b65cf8ae0918c5d4f8ed))
+
+## [0.6.49](https://github.com/teh-hippo/teamdeck/compare/v0.6.48...v0.6.49) (2026-11-10)
+
+
+### Bug Fixes
+
+* **deps:** update teh-hippo/common-repo-configs action to v3.5.11 ([#308](https://github.com/teh-hippo/teamdeck/issues/308)) ([fe73779](https://github.com/teh-hippo/teamdeck/commit/fe73779635712d8be447147069764a1546fda21b))
+
+## [0.6.48](https://github.com/teh-hippo/teamdeck/compare/v0.6.47...v0.6.48) (2026-11-08)
+
+
+### Bug Fixes
+
+* **deps:** update teh-hippo/common-repo-configs action to v3.5.10 ([#302](https://github.com/teh-hippo/teamdeck/issues/302)) ([05f1c9b](https://github.com/teh-hippo/teamdeck/commit/05f1c9b09a58fcfc9771d6f02c59410f81cd1f7f))
+
+## [0.6.47](https://github.com/teh-hippo/teamdeck/compare/v0.6.46...v0.6.47) (2026-11-07)
+
+
+### Bug Fixes
+
+* **deps:** update teh-hippo/common-repo-configs action to v3.5.9 ([#297](https://github.com/teh-hippo/teamdeck/issues/297)) ([36b17d5](https://github.com/teh-hippo/teamdeck/commit/36b17d561736e8a7217dbf5969a6868b1a4273a0))
+
+## [0.6.46](https://github.com/teh-hippo/teamdeck/compare/v0.6.45...v0.6.46) (2026-11-06)
+
+
+### Bug Fixes
+
+* **deps:** update teh-hippo/common-repo-configs action to v3.5.8 ([#294](https://github.com/teh-hippo/teamdeck/issues/294)) ([a02e5c8](https://github.com/teh-hippo/teamdeck/commit/a02e5c8e7c4c8eaefc0cc0bb6d9bc2b30099c16c))
+
+## [0.6.45](https://github.com/teh-hippo/teamdeck/compare/v0.6.44...v0.6.45) (2026-11-05)
+
+
+### Bug Fixes
+
+* **deps:** update teh-hippo/common-repo-configs action to v3.5.7 ([#290](https://github.com/teh-hippo/teamdeck/issues/290)) ([f24aa04](https://github.com/teh-hippo/teamdeck/commit/f24aa044e85434ec295edb519eb7a09e4a801e35))
+
+## [0.6.44](https://github.com/teh-hippo/teamdeck/compare/v0.6.43...v0.6.44) (2026-11-03)
+
+
+### Bug Fixes
+
+* **deps:** update teh-hippo/common-repo-configs action to v3.5.6 ([#285](https://github.com/teh-hippo/teamdeck/issues/285)) ([7263fc5](https://github.com/teh-hippo/teamdeck/commit/7263fc588b41f049101078e1af852c0eae40dbfb))
+
+## [0.6.43](https://github.com/teh-hippo/teamdeck/compare/v0.6.42...v0.6.43) (2026-11-01)
+
+
+### Bug Fixes
+
+* **deps:** update teh-hippo/common-repo-configs action to v3.5.5 ([#276](https://github.com/teh-hippo/teamdeck/issues/276)) ([95f2412](https://github.com/teh-hippo/teamdeck/commit/95f2412d5580b2865aa881810127e8a92541492a))
+
+## [0.6.42](https://github.com/teh-hippo/teamdeck/compare/v0.6.41...v0.6.42) (2026-10-30)
+
+
+### Bug Fixes
+
+* **deps:** update teh-hippo/common-repo-configs action to v3.5.4 ([#270](https://github.com/teh-hippo/teamdeck/issues/270)) ([79959db](https://github.com/teh-hippo/teamdeck/commit/79959db94db6cfa320d58891abd145eb1e235738))
+
+## [0.6.41](https://github.com/teh-hippo/teamdeck/compare/v0.6.40...v0.6.41) (2026-10-28)
+
+
+### Bug Fixes
+
+* **deps:** update teh-hippo/common-repo-configs action to v3.5.3 ([#265](https://github.com/teh-hippo/teamdeck/issues/265)) ([5bb4004](https://github.com/teh-hippo/teamdeck/commit/5bb4004d4a978d8853698cb3f92108e984217643))
+
+## [0.6.40](https://github.com/teh-hippo/teamdeck/compare/v0.6.39...v0.6.40) (2026-10-27)
+
+
+### Bug Fixes
+
+* **deps:** update teh-hippo/common-repo-configs action to v3.5.2 ([#260](https://github.com/teh-hippo/teamdeck/issues/260)) ([6e04e37](https://github.com/teh-hippo/teamdeck/commit/6e04e37defcff7fdf0f8d39a1f6d065b7b4333a6))
+
+## [0.6.39](https://github.com/teh-hippo/teamdeck/compare/v0.6.38...v0.6.39) (2026-10-25)
+
+
+### Bug Fixes
+
+* **deps:** update teh-hippo/common-repo-configs action to v3.5.1 ([#256](https://github.com/teh-hippo/teamdeck/issues/256)) ([66a10ac](https://github.com/teh-hippo/teamdeck/commit/66a10ac7f833aea5c5ce8af2ec3ba702e74d1cf6))
+
+## [0.6.38](https://github.com/teh-hippo/teamdeck/compare/v0.6.37...v0.6.38) (2026-10-24)
+
+
+### Bug Fixes
+
+* **deps:** update teh-hippo/common-repo-configs action to v3.5.0 ([#251](https://github.com/teh-hippo/teamdeck/issues/251)) ([af3a31f](https://github.com/teh-hippo/teamdeck/commit/af3a31f213a1e8b78b9c98879203cac47705e58d))
+
+## [0.6.37](https://github.com/teh-hippo/teamdeck/compare/v0.6.36...v0.6.37) (2026-10-23)
+
+
+### Bug Fixes
+
+* **deps:** update teh-hippo/common-repo-configs action to v3.4.0 ([#246](https://github.com/teh-hippo/teamdeck/issues/246)) ([0fb48ac](https://github.com/teh-hippo/teamdeck/commit/0fb48ac33cce80711ead978d6198d6dadcc76478))
+
+## [0.6.36](https://github.com/teh-hippo/teamdeck/compare/v0.6.35...v0.6.36) (2026-10-22)
+
+
+### Bug Fixes
+
+* **deps:** update teh-hippo/common-repo-configs action to v3.3.1 ([#243](https://github.com/teh-hippo/teamdeck/issues/243)) ([29b6f90](https://github.com/teh-hippo/teamdeck/commit/29b6f900c7e850d5d1f15ba29548515505568482))
+
+## [0.6.35](https://github.com/teh-hippo/teamdeck/compare/v0.6.34...v0.6.35) (2026-10-20)
+
+
+### Bug Fixes
+
+* **deps:** update teh-hippo/common-repo-configs action to v3.2.37 ([#237](https://github.com/teh-hippo/teamdeck/issues/237)) ([3324d10](https://github.com/teh-hippo/teamdeck/commit/3324d10be5179756246aa61b044fa31ddaee4d48))
+
+## [0.6.34](https://github.com/teh-hippo/teamdeck/compare/v0.6.33...v0.6.34) (2026-10-15)
+
+
+### Bug Fixes
+
+* **deps:** update teh-hippo/common-repo-configs action to v3.2.35 ([#230](https://github.com/teh-hippo/teamdeck/issues/230)) ([33f69d8](https://github.com/teh-hippo/teamdeck/commit/33f69d817050183e1f2aad8406286864f5470168))
+
+## [0.6.33](https://github.com/teh-hippo/teamdeck/compare/v0.6.32...v0.6.33) (2026-10-13)
+
+
+### Bug Fixes
+
+* **deps:** update teh-hippo/common-repo-configs action to v3.2.34 ([#227](https://github.com/teh-hippo/teamdeck/issues/227)) ([2137ec5](https://github.com/teh-hippo/teamdeck/commit/2137ec5f38e73e4470fc39d5ecc2b82c91fca79d))
+
+## [0.6.32](https://github.com/teh-hippo/teamdeck/compare/v0.6.31...v0.6.32) (2026-10-13)
+
+
+### Bug Fixes
+
+* **deps:** update teh-hippo/common-repo-configs action to v3.2.33 ([#223](https://github.com/teh-hippo/teamdeck/issues/223)) ([693e460](https://github.com/teh-hippo/teamdeck/commit/693e460762a1c184c03aa94ea7f8e3e8dff5601d))
+
+## [0.6.31](https://github.com/teh-hippo/teamdeck/compare/v0.6.30...v0.6.31) (2026-10-10)
+
+
+### Bug Fixes
+
+* **deps:** update teh-hippo/common-repo-configs action to v3.2.32 ([#217](https://github.com/teh-hippo/teamdeck/issues/217)) ([38d72d0](https://github.com/teh-hippo/teamdeck/commit/38d72d07383bafd1a8da13c0807b9d6c56ee2cec))
+
 ## [0.6.30](https://github.com/teh-hippo/teamdeck/compare/v0.6.29...v0.6.30) (2026-10-09)
 
 
