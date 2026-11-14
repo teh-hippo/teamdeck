@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.51](https://github.com/teh-hippo/teamdeck/compare/v0.6.50...v0.6.51) (2026-11-14)
+
+
+### Bug Fixes
+
+* **deps:** update dependency @elgato/streamdeck to v3 ([#175](https://github.com/teh-hippo/teamdeck/issues/175)) ([20e4951](https://github.com/teh-hippo/teamdeck/commit/20e4951cb40aa7bd63b37ccc6db007b263e7d282))
+
 ## [0.6.50](https://github.com/teh-hippo/teamdeck/compare/v0.6.49...v0.6.50) (2026-11-12)
 
 
