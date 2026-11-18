@@ -265,7 +265,7 @@ dependencies = [
 
 [[package]]
 name = "teamdeck-helper"
-version = "0.6.51"
+version = "0.6.52"
 dependencies = [
  "serde",
  "serde_json",
