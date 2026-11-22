@@ -99,7 +99,7 @@ dependencies = [
 
 [[package]]
 name = "teamdeck-helper"
-version = "0.6.53"
+version = "0.6.54"
 dependencies = [
  "serde",
  "serde_json",
@@ -109,9 +109,9 @@ dependencies = [
 
 [[package]]
 name = "uiautomation"
-version = "0.25.2"
+version = "0.25.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e9a0a564a451d8d7dce4da8c084d408f8017d35eba84d631808cf43114aa63b"
+checksum = "4915ae07066ba748456eea8551a89b1f8b9bae7abf7de4a4ce26e80e9604aacb"
 dependencies = [
  "uiautomation_derive",
  "windows",
@@ -120,9 +120,9 @@ dependencies = [
 
 [[package]]
 name = "uiautomation_derive"
-version = "0.7.10"
+version = "0.7.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c0bdb4af3aa709dda59b797d95a9691195783656531dd3d8824b7185e8e24e4c"
+checksum = "8baf05e7430496612b91bca9ccf94a26898bef3500d0488efe0e9543327f928e"
 dependencies = [
  "proc-macro2",
  "quote",
