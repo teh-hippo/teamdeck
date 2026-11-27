@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.6.57](https://github.com/teh-hippo/teamdeck/compare/v0.6.56...v0.6.57) (2026-11-27)
+
+
+### Bug Fixes
+
+* **deps:** override vulnerable Zod version ([5d8a9bb](https://github.com/teh-hippo/teamdeck/commit/5d8a9bb3902dc2ebb741a248e6900002ead11727))
+
+
+### Performance Improvements
+
+* make helper status handling event driven ([1db5c3d](https://github.com/teh-hippo/teamdeck/commit/1db5c3d5db585e7d6572303669775c55e8f65d82))
+* replace polling with event-driven workflows ([19c30fa](https://github.com/teh-hippo/teamdeck/commit/19c30fa35c5b3097134f246a6cd71eaec544bd02))
+
 ## [0.6.56](https://github.com/teh-hippo/teamdeck/compare/v0.6.55...v0.6.56) (2026-11-25)
 
 
