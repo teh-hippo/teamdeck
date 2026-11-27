@@ -14,6 +14,7 @@ import { helperPath as defaultHelperPath } from "./helper-path";
 import type { Listener, ReactionType, TeamsSnapshot, ToggleStateField } from "./types";
 
 const MAX_RESTART_DELAY = 30_000;
+const INITIAL_RESTART_DELAY = 100;
 const HEARTBEAT_TIMEOUT = 1_800;
 
 type HelperLogger = { info(message: string): void; warn(message: string): void };
@@ -137,7 +138,7 @@ export class HelperClient {
 	#proc?: ChildProcess;
 	#stopped = true;
 	#snapshot: TeamsSnapshot = HELPER_DISCONNECTED;
-	#restartDelay = 1_000;
+	#restartDelay = INITIAL_RESTART_DELAY;
 	#restartTimer?: ReturnType<typeof setTimeout>;
 	#watchdogTimer?: ReturnType<typeof setTimeout>;
 	#heartbeatSeen = false;
@@ -317,7 +318,7 @@ export class HelperClient {
 		this.#watchdogTimer = setTimeout(() => {
 			if (!this.#stopped && this.#proc === proc) {
 				this.#log.warn("Teams helper heartbeat timed out.");
-				this.#killAndRespawn("heartbeat timed out");
+				this.#killAndRespawn("heartbeat timed out", false);
 			}
 		}, HEARTBEAT_TIMEOUT);
 		this.#watchdogTimer.unref?.();
@@ -520,7 +521,7 @@ export class HelperClient {
 
 	#markHealthy(): void {
 		if (this.#heartbeatSeen && this.#snapshotSeen) {
-			this.#restartDelay = 1_000;
+			this.#restartDelay = INITIAL_RESTART_DELAY;
 		}
 	}
 

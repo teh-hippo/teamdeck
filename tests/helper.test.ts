@@ -336,9 +336,29 @@ test("a live process with no heartbeats is replaced", () => {
 	const { client, procs, logger } = makeClient();
 	client.start();
 	mock.timers.tick(1_800);
-	assert.equal(procs.length, 2);
+	assert.equal(procs.length, 1, "restart uses backoff instead of an immediate respawn");
 	assert.equal(procs[0].killed, true);
+	mock.timers.tick(99);
+	assert.equal(procs.length, 1);
+	mock.timers.tick(1);
+	assert.equal(procs.length, 2);
 	assert.ok(logger.warns.some((message) => message.includes("heartbeat timed out")));
+});
+
+test("repeated unhealthy restarts back off until healthy", () => {
+	mock.timers.enable({ apis: ["setTimeout"] });
+	const { client, procs } = makeClient();
+	client.start();
+	mock.timers.tick(1_800);
+	mock.timers.tick(100);
+	assert.equal(procs.length, 2);
+
+	mock.timers.tick(1_800);
+	assert.equal(procs[1].killed, true);
+	mock.timers.tick(199);
+	assert.equal(procs.length, 2);
+	mock.timers.tick(1);
+	assert.equal(procs.length, 3);
 });
 
 test("helper output renews the liveness deadline", async () => {
@@ -351,6 +371,8 @@ test("helper output renews the liveness deadline", async () => {
 
 	mock.timers.tick(1_700);
 	assert.equal(procs.length, 1);
+	mock.timers.tick(100);
+	assert.equal(procs[0].killed, true);
 	mock.timers.tick(100);
 	assert.equal(procs.length, 2);
 });
@@ -366,6 +388,8 @@ test("a timed-out toggle is replayed after the replacement becomes healthy", asy
 	procs[0].line(started(1, "set-mute"));
 	await flush();
 	mock.timers.tick(2_000);
+	assert.equal(procs[0].killed, true);
+	mock.timers.tick(100);
 	assert.equal(procs.length, 2);
 	procs[1].line(heartbeat);
 	procs[1].line(validSnapshot());

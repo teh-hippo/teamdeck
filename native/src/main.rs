@@ -12,11 +12,15 @@ mod serve;
 mod snapshot;
 
 use meeting::MeetingCache;
-use serve::{build_snapshot, serve};
+use serve::{build_snapshot, serve, start_heartbeat_writer};
 use snapshot::PresenceState;
 use uiautomation::UIAutomation;
 
 fn main() {
+    let serve_mode = std::env::args().nth(1).as_deref() == Some("serve");
+    if serve_mode {
+        start_heartbeat_writer();
+    }
     let automation = match UIAutomation::new() {
         Ok(a) => a,
         Err(e) => {
@@ -25,7 +29,7 @@ fn main() {
         }
     };
 
-    if std::env::args().nth(1).as_deref() == Some("serve") {
+    if serve_mode {
         serve(&automation);
         return;
     }

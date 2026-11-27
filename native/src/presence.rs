@@ -3,20 +3,44 @@ use crate::snapshot::Presence;
 use std::fs;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
-use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::{Receiver, Sender};
+use std::sync::Arc;
 use std::time::Duration;
+use windows::core::HSTRING;
+use windows::Win32::Foundation::CloseHandle;
+use windows::Win32::Storage::FileSystem::{
+    CreateFileW, ReadDirectoryChangesW, FILE_FLAG_BACKUP_SEMANTICS, FILE_LIST_DIRECTORY,
+    FILE_NOTIFY_CHANGE, FILE_NOTIFY_CHANGE_CREATION, FILE_NOTIFY_CHANGE_DIR_NAME,
+    FILE_NOTIFY_CHANGE_FILE_NAME, FILE_NOTIFY_CHANGE_LAST_WRITE, FILE_NOTIFY_CHANGE_SIZE,
+    FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE, OPEN_EXISTING,
+};
 
 /// The New Teams log directory (`%LOCALAPPDATA%\Packages\MSTeams_8wekyb3d8bbwe\...\Logs`), if it exists.
-fn logs_dir() -> Option<PathBuf> {
+fn logs_path() -> Option<PathBuf> {
     let local = std::env::var_os("LOCALAPPDATA")?;
-    let dir = Path::new(&local)
-        .join("Packages")
-        .join("MSTeams_8wekyb3d8bbwe")
-        .join("LocalCache")
-        .join("Microsoft")
-        .join("MSTeams")
-        .join("Logs");
+    Some(
+        Path::new(&local)
+            .join("Packages")
+            .join("MSTeams_8wekyb3d8bbwe")
+            .join("LocalCache")
+            .join("Microsoft")
+            .join("MSTeams")
+            .join("Logs"),
+    )
+}
+
+fn logs_dir() -> Option<PathBuf> {
+    let dir = logs_path()?;
     dir.is_dir().then_some(dir)
+}
+
+fn logs_watch_dir() -> Option<PathBuf> {
+    let target = logs_path()?;
+    target
+        .ancestors()
+        .find(|path| path.is_dir())
+        .map(Path::to_path_buf)
 }
 
 /// True for a rolling-log file name (`MSTeams_<ts>.log`). Requires a digit right after the prefix so
@@ -86,6 +110,14 @@ fn read_appended(path: &Path, start: u64, len: u64) -> Option<(String, u64)> {
         None => Some((String::new(), start)),
     }
 }
+
+const FILE_CHANGE_FILTER: FILE_NOTIFY_CHANGE = FILE_NOTIFY_CHANGE(
+    FILE_NOTIFY_CHANGE_FILE_NAME.0
+        | FILE_NOTIFY_CHANGE_DIR_NAME.0
+        | FILE_NOTIFY_CHANGE_LAST_WRITE.0
+        | FILE_NOTIFY_CHANGE_SIZE.0
+        | FILE_NOTIFY_CHANGE_CREATION.0,
+);
 
 /// Maps a New Teams availability token to a `Presence`; unrecognised tokens return `None` and are
 /// never echoed. Idle variants collapse to their base state.
@@ -179,48 +211,92 @@ impl PresenceReader {
     }
 }
 
-/// Background presence poller: tails the log every couple of seconds only while opt-in is on and waits without polling while disabled. Each enable re-seeds immediately, avoiding stale state after a rapid off/on toggle. Must stay panic- and large-alloc-free (reads are `?`/`.ok()`, indexing is newline-bounded, `read_appended` caps the span): it shares the `panic = "abort"` process, so a panic here would abort the whole helper.
-pub(crate) fn presence_reader_loop(tx: Sender<Msg>, control: Receiver<bool>) {
+#[derive(Clone, Copy)]
+pub(crate) enum PresenceEvent {
+    Enabled(bool),
+    Changed,
+}
+
+pub(crate) fn presence_watcher_loop(tx: Sender<PresenceEvent>, enabled: Arc<AtomicBool>) {
+    loop {
+        let Some(dir) = logs_watch_dir() else {
+            std::thread::sleep(Duration::from_millis(100));
+            continue;
+        };
+        let path = HSTRING::from(dir.as_path());
+        let handle = match unsafe {
+            CreateFileW(
+                &path,
+                FILE_LIST_DIRECTORY.0,
+                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                None,
+                OPEN_EXISTING,
+                FILE_FLAG_BACKUP_SEMANTICS,
+                None,
+            )
+        } {
+            Ok(handle) => handle,
+            Err(_) => {
+                std::thread::sleep(Duration::from_millis(100));
+                continue;
+            }
+        };
+        loop {
+            let mut buffer = [0u8; 4096];
+            let mut bytes = 0;
+            let changed = unsafe {
+                ReadDirectoryChangesW(
+                    handle,
+                    buffer.as_mut_ptr().cast(),
+                    buffer.len() as u32,
+                    true,
+                    FILE_CHANGE_FILTER,
+                    Some(&mut bytes),
+                    None,
+                    None,
+                )
+            };
+            if changed.is_err() {
+                break;
+            }
+            if enabled.load(Ordering::Acquire)
+                && bytes > 0
+                && tx.send(PresenceEvent::Changed).is_err()
+            {
+                let _ = unsafe { CloseHandle(handle) };
+                return;
+            }
+        }
+        let _ = unsafe { CloseHandle(handle) };
+    }
+}
+
+/// Background presence reader: polls only when a Windows directory notification reports a change and waits indefinitely while disabled.
+pub(crate) fn presence_reader_loop(tx: Sender<Msg>, control: Receiver<PresenceEvent>) {
     let mut reader = PresenceReader::new();
     let mut enabled = false;
-    loop {
-        if !enabled {
-            match control.recv() {
-                Ok(true) => {
-                    enabled = true;
-                    reader.reset();
+    while let Ok(event) = control.recv() {
+        match event {
+            PresenceEvent::Enabled(on) => {
+                enabled = on;
+                reader.reset();
+                if enabled {
                     if let Some(p) = reader.poll(true) {
                         if tx.send(Msg::Presence(p)).is_err() {
                             break;
                         }
                     }
                 }
-                Ok(false) => reader.reset(),
-                Err(_) => break,
             }
-            continue;
-        }
-        match control.recv_timeout(Duration::from_secs(2)) {
-            Ok(true) => {
-                reader.reset();
-                if let Some(p) = reader.poll(true) {
-                    if tx.send(Msg::Presence(p)).is_err() {
-                        break;
-                    }
-                }
-            }
-            Ok(false) => {
-                enabled = false;
-                reader.reset();
-            }
-            Err(RecvTimeoutError::Timeout) => {
+            PresenceEvent::Changed if enabled => {
+                std::thread::sleep(Duration::from_millis(25));
                 if let Some(p) = reader.poll(false) {
                     if tx.send(Msg::Presence(p)).is_err() {
                         break;
                     }
                 }
             }
-            Err(RecvTimeoutError::Disconnected) => break,
+            PresenceEvent::Changed => {}
         }
     }
 }
