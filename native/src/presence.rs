@@ -3,9 +3,7 @@ use crate::snapshot::Presence;
 use std::fs;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::Sender;
-use std::sync::Arc;
+use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender};
 use std::time::Duration;
 
 /// The New Teams log directory (`%LOCALAPPDATA%\Packages\MSTeams_8wekyb3d8bbwe\...\Logs`), if it exists.
@@ -181,34 +179,48 @@ impl PresenceReader {
     }
 }
 
-/// Background presence poller: while opt-in is on, tails the log every couple of seconds and pushes a `Msg::Presence` on each change (no UIA event fires for presence, so this is the only driver). `reseed` forces a fresh full re-read so a rapid off/on re-toggle can't leave the tile stuck. Must stay panic- and large-alloc-free (reads are `?`/`.ok()`, indexing is newline-bounded, `read_appended` caps the span): it shares the `panic = "abort"` process, so a panic here would abort the whole helper.
-pub(crate) fn presence_reader_loop(
-    tx: Sender<Msg>,
-    enabled: Arc<AtomicBool>,
-    reseed: Arc<AtomicBool>,
-) {
+/// Background presence poller: tails the log every couple of seconds only while opt-in is on and waits without polling while disabled. Each enable re-seeds immediately, avoiding stale state after a rapid off/on toggle. Must stay panic- and large-alloc-free (reads are `?`/`.ok()`, indexing is newline-bounded, `read_appended` caps the span): it shares the `panic = "abort"` process, so a panic here would abort the whole helper.
+pub(crate) fn presence_reader_loop(tx: Sender<Msg>, control: Receiver<bool>) {
     let mut reader = PresenceReader::new();
-    let mut was_enabled = false;
+    let mut enabled = false;
     loop {
-        std::thread::sleep(Duration::from_secs(2));
-        if !enabled.load(Ordering::Relaxed) {
-            if was_enabled {
-                reader.reset();
-                was_enabled = false;
-                reseed.store(false, Ordering::Relaxed);
+        if !enabled {
+            match control.recv() {
+                Ok(true) => {
+                    enabled = true;
+                    reader.reset();
+                    if let Some(p) = reader.poll(true) {
+                        if tx.send(Msg::Presence(p)).is_err() {
+                            break;
+                        }
+                    }
+                }
+                Ok(false) => reader.reset(),
+                Err(_) => break,
             }
             continue;
         }
-        // Seed on the first poll after enable or whenever the serve loop requested a reseed; reset first so it re-reads the whole newest file (re-reporting the current value, which a re-enable without an observed "off" would otherwise miss).
-        let seed = !was_enabled || reseed.swap(false, Ordering::Relaxed);
-        was_enabled = true;
-        if seed {
-            reader.reset();
-        }
-        if let Some(p) = reader.poll(seed) {
-            if tx.send(Msg::Presence(p)).is_err() {
-                break;
+        match control.recv_timeout(Duration::from_secs(2)) {
+            Ok(true) => {
+                reader.reset();
+                if let Some(p) = reader.poll(true) {
+                    if tx.send(Msg::Presence(p)).is_err() {
+                        break;
+                    }
+                }
             }
+            Ok(false) => {
+                enabled = false;
+                reader.reset();
+            }
+            Err(RecvTimeoutError::Timeout) => {
+                if let Some(p) = reader.poll(false) {
+                    if tx.send(Msg::Presence(p)).is_err() {
+                        break;
+                    }
+                }
+            }
+            Err(RecvTimeoutError::Disconnected) => break,
         }
     }
 }

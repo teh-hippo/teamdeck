@@ -332,17 +332,31 @@ test("schema mismatch replaces the helper instead of accepting stale data", asyn
 });
 
 test("a live process with no heartbeats is replaced", () => {
-	mock.timers.enable({ apis: ["Date", "setInterval", "setTimeout"], now: 1_000 });
+	mock.timers.enable({ apis: ["setTimeout"] });
 	const { client, procs, logger } = makeClient();
 	client.start();
-	mock.timers.tick(3_000);
+	mock.timers.tick(1_800);
 	assert.equal(procs.length, 2);
 	assert.equal(procs[0].killed, true);
 	assert.ok(logger.warns.some((message) => message.includes("heartbeat timed out")));
 });
 
+test("helper output renews the liveness deadline", async () => {
+	mock.timers.enable({ apis: ["setTimeout"] });
+	const { client, procs } = makeClient();
+	client.start();
+	mock.timers.tick(1_700);
+	procs[0].line(heartbeat);
+	await flush();
+
+	mock.timers.tick(1_700);
+	assert.equal(procs.length, 1);
+	mock.timers.tick(100);
+	assert.equal(procs.length, 2);
+});
+
 test("a timed-out toggle is replayed after the replacement becomes healthy", async () => {
-	mock.timers.enable({ apis: ["Date", "setInterval", "setTimeout"], now: 1_000 });
+	mock.timers.enable({ apis: ["Date", "setTimeout"], now: 1_000 });
 	const { client, procs } = makeClient();
 	client.start();
 	procs[0].line(validSnapshot());
@@ -370,7 +384,11 @@ test("queued commands have no deadline until native execution starts", async () 
 	await flush();
 
 	const completed = client.react("like");
-	mock.timers.tick(10_000);
+	for (let i = 0; i < 6; i++) {
+		mock.timers.tick(1_500);
+		procs[0].line(heartbeat);
+		await flush();
+	}
 	assert.equal(procs.length, 1);
 	procs[0].line(started(1, "react", 10_000));
 	procs[0].line(result(1, "react", { queueMs: 10_000 }));

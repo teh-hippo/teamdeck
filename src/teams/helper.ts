@@ -15,7 +15,6 @@ import type { Listener, ReactionType, TeamsSnapshot, ToggleStateField } from "./
 
 const MAX_RESTART_DELAY = 30_000;
 const HEARTBEAT_TIMEOUT = 1_800;
-const WATCHDOG_INTERVAL = 250;
 
 type HelperLogger = { info(message: string): void; warn(message: string): void };
 
@@ -140,8 +139,7 @@ export class HelperClient {
 	#snapshot: TeamsSnapshot = HELPER_DISCONNECTED;
 	#restartDelay = 1_000;
 	#restartTimer?: ReturnType<typeof setTimeout>;
-	#watchdogTimer?: ReturnType<typeof setInterval>;
-	#lastHeartbeatAt = 0;
+	#watchdogTimer?: ReturnType<typeof setTimeout>;
 	#heartbeatSeen = false;
 	#snapshotSeen = false;
 	#nextCommandId = 1;
@@ -179,8 +177,6 @@ export class HelperClient {
 		}
 		this.#stopped = false;
 		this.#snapshot = { ...HELPER_DISCONNECTED, logReadingAllowed: this.#logReadingEnabled };
-		this.#watchdogTimer = setInterval(() => this.#watchdog(), WATCHDOG_INTERVAL);
-		this.#watchdogTimer.unref?.();
 		this.#spawn();
 	}
 
@@ -194,7 +190,7 @@ export class HelperClient {
 			clearTimeout(timer);
 		}
 		this.#replayTimers.clear();
-		clearInterval(this.#watchdogTimer);
+		clearTimeout(this.#watchdogTimer);
 		this.#failAllPending();
 		const proc = this.#proc;
 		this.#proc = undefined;
@@ -312,14 +308,19 @@ export class HelperClient {
 		this.#killAndRespawn(`command ${id} timed out`);
 	}
 
-	#watchdog(): void {
-		if (this.#stopped || !this.#proc || this.#lastHeartbeatAt === 0) {
+	#armWatchdog(): void {
+		clearTimeout(this.#watchdogTimer);
+		const proc = this.#proc;
+		if (!proc || this.#stopped) {
 			return;
 		}
-		if (Date.now() - this.#lastHeartbeatAt > HEARTBEAT_TIMEOUT) {
-			this.#log.warn("Teams helper heartbeat timed out.");
-			this.#killAndRespawn("heartbeat timed out");
-		}
+		this.#watchdogTimer = setTimeout(() => {
+			if (!this.#stopped && this.#proc === proc) {
+				this.#log.warn("Teams helper heartbeat timed out.");
+				this.#killAndRespawn("heartbeat timed out");
+			}
+		}, HEARTBEAT_TIMEOUT);
+		this.#watchdogTimer.unref?.();
 	}
 
 	#prepareRestart(): void {
@@ -397,6 +398,7 @@ export class HelperClient {
 		}
 		const dead = this.#proc;
 		this.#proc = undefined;
+		clearTimeout(this.#watchdogTimer);
 		this.#prepareRestart();
 		try {
 			dead?.kill();
@@ -419,9 +421,9 @@ export class HelperClient {
 		clearTimeout(this.#restartTimer);
 		const proc = this.#spawnFn(exe, ["serve"], { stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
 		this.#proc = proc;
-		this.#lastHeartbeatAt = Date.now();
 		this.#heartbeatSeen = false;
 		this.#snapshotSeen = false;
+		this.#armWatchdog();
 
 		if (proc.stdout) {
 			createInterface({ input: proc.stdout }).on("line", (line) => {
@@ -446,6 +448,7 @@ export class HelperClient {
 				return;
 			}
 			this.#proc = undefined;
+			clearTimeout(this.#watchdogTimer);
 			this.#prepareRestart();
 			this.#setSnapshot(HELPER_DISCONNECTED);
 			if (!this.#stopped) {
@@ -483,7 +486,7 @@ export class HelperClient {
 			this.#killAndRespawn("schema mismatch", false);
 			return;
 		}
-		this.#lastHeartbeatAt = Date.now();
+		this.#armWatchdog();
 		if (message.type === "heartbeat") {
 			this.#heartbeatSeen = true;
 			this.#markHealthy();

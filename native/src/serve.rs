@@ -9,12 +9,16 @@ use crate::snapshot::{
     known, now_ms, Controls, Presence, PresenceState, Signal, Signals, Snapshot, SCHEMA,
 };
 use std::io::{BufRead, ErrorKind, Write};
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Sender};
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 use uiautomation::types::TreeScope;
 use uiautomation::{UIAutomation, UIElement};
+use windows::core::w;
+use windows::Win32::Foundation::ERROR_SUCCESS;
+use windows::Win32::System::Registry::{
+    RegCloseKey, RegNotifyChangeKeyValue, RegOpenKeyExW, HKEY, HKEY_CURRENT_USER, KEY_NOTIFY,
+    REG_NOTIFY_CHANGE_LAST_SET,
+};
 
 pub(crate) fn build_snapshot(
     automation: &UIAutomation,
@@ -175,16 +179,42 @@ fn timeout_requires_snapshot(dirty: bool, since_emit: Duration, tick: Duration) 
 }
 
 fn camera_reader_loop(tx: Sender<Msg>) {
-    let mut previous = teams_webcam_in_use();
     loop {
-        std::thread::sleep(Duration::from_millis(250));
-        let current = teams_webcam_in_use();
-        if current != previous {
-            previous = current;
-            if tx.send(Msg::Ping).is_err() {
-                break;
+        let mut key = HKEY::default();
+        let status = unsafe {
+            RegOpenKeyExW(
+                HKEY_CURRENT_USER,
+                w!(
+                    r"SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\webcam\MSTeams_8wekyb3d8bbwe"
+                ),
+                None,
+                KEY_NOTIFY,
+                &mut key,
+            )
+        };
+        if status != ERROR_SUCCESS {
+            std::thread::sleep(Duration::from_secs(2));
+            continue;
+        }
+        let mut previous = teams_webcam_in_use();
+        while unsafe {
+            RegNotifyChangeKeyValue(key, false, REG_NOTIFY_CHANGE_LAST_SET, None, false)
+        } == ERROR_SUCCESS
+        {
+            let current = teams_webcam_in_use();
+            if current != previous {
+                previous = current;
+                if tx.send(Msg::Ping).is_err() {
+                    let _ = unsafe { RegCloseKey(key) };
+                    return;
+                }
             }
         }
+        let _ = unsafe { RegCloseKey(key) };
+        if tx.send(Msg::Ping).is_err() {
+            return;
+        }
+        std::thread::sleep(Duration::from_secs(1));
     }
 }
 
@@ -220,15 +250,13 @@ pub(crate) fn serve(automation: &UIAutomation) {
         std::thread::spawn(move || camera_reader_loop(tx));
     }
 
-    let presence_enabled = Arc::new(AtomicBool::new(false));
-    let presence_reseed = Arc::new(AtomicBool::new(false));
+    let (presence_control, presence_rx) = mpsc::channel();
     {
         let tx = tx.clone();
-        let enabled = Arc::clone(&presence_enabled);
-        let reseed = Arc::clone(&presence_reseed);
-        std::thread::spawn(move || presence_reader_loop(tx, enabled, reseed));
+        std::thread::spawn(move || presence_reader_loop(tx, presence_rx));
     }
     let mut current_presence = PresenceState::disabled();
+    let mut presence_enabled = false;
     let mut cache = MeetingCache::new();
     let mut name_reg: Option<NameReg> = None;
     let mut window_reg = None;
@@ -300,14 +328,13 @@ pub(crate) fn serve(automation: &UIAutomation) {
         match rx.recv_timeout(wait) {
             Ok(Msg::Cmd(line)) => {
                 if let Some(on) = parse_log_reading_cmd(&line) {
+                    if presence_control.send(on).is_err() {
+                        eprintln!("teamdeck-helper: presence reader unavailable");
+                    }
+                    presence_enabled = on;
                     if on {
-                        let was_off = !presence_enabled.swap(true, Ordering::Relaxed);
-                        presence_reseed.store(true, Ordering::Relaxed);
-                        if was_off {
-                            current_presence = PresenceState::seeking();
-                        }
+                        current_presence = PresenceState::seeking();
                     } else {
-                        presence_enabled.store(false, Ordering::Relaxed);
                         current_presence = PresenceState::disabled();
                     }
                     dirty = true;
@@ -325,7 +352,7 @@ pub(crate) fn serve(automation: &UIAutomation) {
                 }
             }
             Ok(Msg::Presence(p)) => {
-                if presence_enabled.load(Ordering::Relaxed) {
+                if presence_enabled {
                     current_presence = PresenceState::from_value(p);
                     dirty = true;
                 }
