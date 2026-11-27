@@ -49,6 +49,9 @@
 	"dependencies": {
 		"@elgato/streamdeck": "^3.0.0"
 	},
+	"overrides": {
+		"zod": "4.6.6"
+	},
 	"knip": {
 		"entry": [
 			"src/plugin.ts",
