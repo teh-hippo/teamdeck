@@ -40,7 +40,7 @@
 		"@rollup/plugin-terser": "1.0.2",
 		"@rollup/plugin-typescript": "12.3.1",
 		"@tsconfig/node26": "26.0.2",
-		"@types/node": "26.6.6",
+		"@types/node": "26.6.7",
 		"rollup": "4.68.8",
 		"sharp": "0.35.5",
 		"tslib": "2.9.1",
